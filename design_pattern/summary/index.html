@@ -1,0 +1,1200 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="java 设计模式,java design pattern,设计模式,design pattern,为什么 设计模式,why design pattern,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文讲解了设计模式与OOP的三大特性及OOP七项原则间的关系，并讲解了使用设计模式的好处及为何需要使用设计模式。最后通过问答形式讲解了设计模式相关的常见问题">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章">
+<meta property="og:url" content="http://www.jasongj.com/design_pattern/summary/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文讲解了设计模式与OOP的三大特性及OOP七项原则间的关系，并讲解了使用设计模式的好处及为何需要使用设计模式。最后通过问答形式讲解了设计模式相关的常见问题">
+<meta property="og:updated_time" content="2017-02-17T12:31:23.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章">
+<meta name="twitter:description" content="本文讲解了设计模式与OOP的三大特性及OOP七项原则间的关系，并讲解了使用设计模式的好处及为何需要使用设计模式。最后通过问答形式讲解了设计模式相关的常见问题">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/design_pattern/summary/"/>
+
+
+
+
+
+  <title>
+  
+    Java 设计模式 终结篇 OOP三大特征 OOD七项原则 设计模式十万个为什么 | 技术世界 | java 设计模式,java design pattern,设计模式,design pattern,为什么 设计模式,why design pattern,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/design_pattern/summary/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-06-02T07:26:09+08:00">
+                2016-06-02
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-02-17T20:31:23+08:00">
+                2017-02-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/设计模式/" itemprop="url" rel="index">
+                    <span itemprop="name">设计模式</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/设计模式/Design-Pattern/" itemprop="url" rel="index">
+                    <span itemprop="name">Design Pattern</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/design_pattern/summary/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/design_pattern/summary/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/design_pattern/summary/" class="leancloud_visitors" data-flag-title="Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  3,087
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文讲解了设计模式与OOP的三大特性及OOP七项原则间的关系，并讲解了使用设计模式的好处及为何需要使用设计模式。最后通过问答形式讲解了设计模式相关的常见问题
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/design_pattern/summary/">原文链接</a>　<a href="http://www.jasongj.com/design_pattern/summary/">http://www.jasongj.com/design_pattern/summary/</a></p>
+</blockquote>
+<h1 id="OOP三大基本特性"><a href="#OOP三大基本特性" class="headerlink" title="OOP三大基本特性"></a>OOP三大基本特性</h1><h2 id="封装"><a href="#封装" class="headerlink" title="封装"></a>封装</h2><p>封装，也就是把客观事物封装成抽象的类，并且类可以把自己的属性和方法只让可信的类操作，对不可信的进行信息隐藏。</p>
+<h2 id="继承"><a href="#继承" class="headerlink" title="继承"></a>继承</h2><p>继承是指这样一种能力，它可以使用现有的类的所有功能，并在无需重新编写原来类的情况下对这些功能进行扩展。</p>
+<h2 id="多态"><a href="#多态" class="headerlink" title="多态"></a>多态</h2><p>多态指一个类实例的相同方法在不同情形有不同的表现形式。具体来说就是不同实现类对公共接口有不同的实现方式，但这些操作可以通过相同的方式（公共接口）予以调用。</p>
+<h1 id="OOD七大原则"><a href="#OOD七大原则" class="headerlink" title="OOD七大原则"></a>OOD<strong><em>七</em></strong>大原则</h1><p>面向对象设计（OOD）有<strong><em>七</em></strong>大原则（是的，你没看错，是七大原则，不是六大原则），它们互相补充。</p>
+<h2 id="开-闭原则"><a href="#开-闭原则" class="headerlink" title="开-闭原则"></a>开-闭原则</h2><p>Open-Close Principle（OCP），即开-闭原则。开，指的是对扩展开放，即要支持方便地扩展；闭，指的是对修改关闭，即要严格限制对已有内容的修改。开-闭原则是最抽象也是最重要的OOD原则。<a href="http://www.jasongj.com/design_pattern/simple_factory/">简单工厂模式</a>、<a href="http://www.jasongj.com/design_pattern/factory_method/">工厂方法模式</a>、<a href="http://www.jasongj.com/design_pattern/abstract_factory/">抽象工厂模式</a>中都提到了如何通过良好的设计遵循开-闭原则。</p>
+<h2 id="里氏替换原则"><a href="#里氏替换原则" class="headerlink" title="里氏替换原则"></a>里氏替换原则</h2><p>Liskov Substitution Principle（LSP），即里氏替换原则。该原则规定“子类必须能够替换其父类，否则不应当设计为其子类”。换句话说，父类出现的地方，都应该能由其子类代替。所以，子类只能去扩展基类，而不是隐藏或者覆盖基类。</p>
+<h2 id="依赖倒置原则"><a href="#依赖倒置原则" class="headerlink" title="依赖倒置原则"></a>依赖倒置原则</h2><p>Dependence Inversion Principle（DIP），依赖倒置原则。它讲的是“设计和实现要依赖于抽象而非具体”。一方面抽象化更符合人的思维习惯；另一方面，根据里氏替换原则，可以很容易将原来的抽象替换为扩展后的具体，这样可以很好的支持开-闭原则。</p>
+<h2 id="接口隔离原则"><a href="#接口隔离原则" class="headerlink" title="接口隔离原则"></a>接口隔离原则</h2><p>Interface Segration Principle（ISP），接口隔离原则，“将大的接口打散成多个小的独立的接口”。由于Java类支持实现多个接口，可以很容易的让类具有多种接口的特征，同时每个类可以选择性地只实现目标接口。</p>
+<h2 id="单一职责原则"><a href="#单一职责原则" class="headerlink" title="单一职责原则"></a>单一职责原则</h2><p>Single Responsibility Principle（SRP），单一职责原则。它讲的是，不要存在多于一个导致类变更的原因，是高内聚低耦合的一个体现。</p>
+<h2 id="迪米特法则-最少知道原则"><a href="#迪米特法则-最少知道原则" class="headerlink" title="迪米特法则/最少知道原则"></a>迪米特法则/最少知道原则</h2><p>Law of Demeter or Least Knowledge Principle（LoD or LKP），迪米特法则或最少知道原则。它讲的是“一个对象就尽可能少的去了解其它对象”，从而实现松耦合。如果一个类的职责过多，由于多个职责耦合在了一起，任何一个职责的变更都可能引起其它职责的问题，严重影响了代码的可维护性和可重用性。</p>
+<h2 id="合成-聚合复用原则"><a href="#合成-聚合复用原则" class="headerlink" title="合成/聚合复用原则"></a>合成/聚合复用原则</h2><p>Composite/Aggregate Reuse Principle（CARP / CRP），合成/聚合复用原则。如果新对象的某些功能在别的已经创建好的对象里面已经实现，那么应当尽量使用别的对象提供的功能，使之成为新对象的一部分，而不要再重新创建。新对象可通过向这些对象的委派达到复用已有功能的效果。简而言之，要尽量使用合成/聚合，而非使用继承。《<a href="http://www.jasongj.com/design_pattern/bridge/">Java设计模式（九） 桥接模式</a>》中介绍的桥接模式即是对这一原则的典型应用。</p>
+<h1 id="设计模式"><a href="#设计模式" class="headerlink" title="设计模式"></a>设计模式</h1><h2 id="什么是设计模式"><a href="#什么是设计模式" class="headerlink" title="什么是设计模式"></a>什么是设计模式</h2><p>可以用一句话概括设计模式———设计模式是一种利用OOP的封闭、继承和多态三大特性，同时在遵循单一职责原则、开闭原则、里氏替换原则、迪米特法则、依赖倒置原则、接口隔离原则及合成/聚合复用原则的前提下，被总结出来的经过反复实践并被多数人知晓且经过分类和设计的可重用的软件设计方式。</p>
+<h2 id="设计模式十万个为什么"><a href="#设计模式十万个为什么" class="headerlink" title="设计模式十万个为什么"></a>设计模式十万个为什么</h2><h3 id="为什么要用设计模式"><a href="#为什么要用设计模式" class="headerlink" title="为什么要用设计模式"></a>为什么要用设计模式</h3><ul>
+<li>设计模式是高级软件工程师和架构师面试基本必问的项目（先通过面试进入这个门槛我们再谈其它）</li>
+<li>设计模式是经过大量实践检验的安全高效可复用的解决方案。不要重复发明轮子，而且大多数时候你发明的轮子还没有已有的好</li>
+<li>设计模式是被主流工程师/架构师所广泛接受和使用的，你使用它，方便与别人沟通，也方便别人code review（这个够实在吧）</li>
+<li>使用设计模式可以帮你快速解决80%的代码设计问题，从而让你更专注于业务本身</li>
+<li>设计模式本身是对几大特性的利用和对几大设计原则的践行，代码量积累到一定程度，你会发现你已经或多或少的在使用某些设计模式了</li>
+<li>架构师或者team leader教授初级工程师设计模式，可以很方便的以大家认可以方式提高初级工程师的代码设计水平，从而有利于提高团队工程实力</li>
+</ul>
+<h3 id="是不是一定要尽可能使用设计模式"><a href="#是不是一定要尽可能使用设计模式" class="headerlink" title="是不是一定要尽可能使用设计模式"></a>是不是一定要尽可能使用设计模式</h3><p>每个设计模式都有其适合范围，并解决特定问题。所以项目实践中应该针对特定使用场景选用合适的设计模式，如果某些场景下现在的设计模式都不能很完全的解决问题，那也不必拘泥于设计模式本身。实际上，学习和使用设计模式本身并不是目的，目的是通过学习和使用它，强化面向对象设计思路并用合适的方法解决工程问题。</p>
+<h3 id="设计模式有时并非最优解"><a href="#设计模式有时并非最优解" class="headerlink" title="设计模式有时并非最优解"></a>设计模式有时并非最优解</h3><p>有些人认为，在某些特定场景下，设计模式并非最优方案，而自己的解决方案可能会更好。这个问题得分两个方面来讨论：一方面，如上文所述，所有设计模式都有其适用场景，“one size does not fit all”；另一方面，确实有可能自己设计的方案比设计模式更适合，但这并不影响你学习并使用设计模式，因为设计模式经过大量实战检验能在绝大多数情况下提供良好方案。</p>
+<h3 id="设计模式太教条化"><a href="#设计模式太教条化" class="headerlink" title="设计模式太教条化"></a>设计模式太教条化</h3><p>设计模式虽然都有其相对固定的实现方式，但是它的精髓是利用OOP的三大特性，遵循OOD七大原则解决工程问题。所以学习设计模式的目的不是学习设计模式的固定实现方式本身，而是其思想。</p>
+<h3 id="我有自己的一套思路，没必要引导团队成员学习设计模式"><a href="#我有自己的一套思路，没必要引导团队成员学习设计模式" class="headerlink" title="我有自己的一套思路，没必要引导团队成员学习设计模式"></a>我有自己的一套思路，没必要引导团队成员学习设计模式</h3><p>设计模式是被广泛接受和使用的，引导团队成员使用设计模式可以减少沟通成本，而更专注于业务本身。也许你有自己的一套思路，但是你怎么能保证团队成员一定认可你的思路，进而将你的思路贯彻实施呢？统一使用设计模式能让团队只使用20%的精力决解80%的问题。其它20%的问题，才是你需要花精力解决的。</p>
+<h1 id="Java设计模式系列"><a href="#Java设计模式系列" class="headerlink" title="Java设计模式系列"></a>Java设计模式系列</h1><ul>
+<li><a href="http://www.jasongj.com/design_pattern/simple_factory/">Java设计模式（一） 简单工厂模式不简单</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/factory_method/">Java设计模式（二） 工厂方法模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/abstract_factory/">Java设计模式（三） 抽象工厂模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/observer/">Java设计模式（四） 观察者模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/composite/">Java设计模式（五） 组合模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/proxy_decorator/">Java设计模式（六） 代理模式 VS. 装饰模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/">Java设计模式（七） Spring AOP JDK动态代理 vs. cglib</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/adapter/">Java设计模式（八） 适配器模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/bridge/">Java设计模式（九） 桥接模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/singleton/">Java设计模式（十） 你真的用对单例模式了吗？</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/flyweight/">Java设计模式（十一） 享元模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/strategy/">Java设计模式（十二） 策略模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/summary/">Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'design_pattern/summary/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"># Java</a>
+          
+            <a href="/tags/设计模式/" rel="tag"># 设计模式</a>
+          
+            <a href="/tags/Design-Pattern/" rel="tag"># Design Pattern</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/design_pattern/strategy/" rel="next" title="Java设计模式（十二） 策略模式">
+                <i class="fa fa-chevron-left"></i> Java设计模式（十二） 策略模式
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/sql/mvcc/" rel="prev" title="SQL优化（六） MVCC PostgreSQL实现事务和多版本并发控制的精华">
+                SQL优化（六） MVCC PostgreSQL实现事务和多版本并发控制的精华 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/design_pattern/summary/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/design_pattern/summary/'),
+                identifier: decodeURI('/design_pattern/summary/'),
+                title: 'Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章',
+                slug: 'design_pattern/summary/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#OOP三大基本特性"><span class="nav-number">1.</span> <span class="nav-text">OOP三大基本特性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#封装"><span class="nav-number">1.1.</span> <span class="nav-text">封装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#继承"><span class="nav-number">1.2.</span> <span class="nav-text">继承</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#多态"><span class="nav-number">1.3.</span> <span class="nav-text">多态</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#OOD七大原则"><span class="nav-number">2.</span> <span class="nav-text">OOD七大原则</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#开-闭原则"><span class="nav-number">2.1.</span> <span class="nav-text">开-闭原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#里氏替换原则"><span class="nav-number">2.2.</span> <span class="nav-text">里氏替换原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#依赖倒置原则"><span class="nav-number">2.3.</span> <span class="nav-text">依赖倒置原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#接口隔离原则"><span class="nav-number">2.4.</span> <span class="nav-text">接口隔离原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#单一职责原则"><span class="nav-number">2.5.</span> <span class="nav-text">单一职责原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#迪米特法则-最少知道原则"><span class="nav-number">2.6.</span> <span class="nav-text">迪米特法则/最少知道原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#合成-聚合复用原则"><span class="nav-number">2.7.</span> <span class="nav-text">合成/聚合复用原则</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#设计模式"><span class="nav-number">3.</span> <span class="nav-text">设计模式</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#什么是设计模式"><span class="nav-number">3.1.</span> <span class="nav-text">什么是设计模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#设计模式十万个为什么"><span class="nav-number">3.2.</span> <span class="nav-text">设计模式十万个为什么</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么要用设计模式"><span class="nav-number">3.2.1.</span> <span class="nav-text">为什么要用设计模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#是不是一定要尽可能使用设计模式"><span class="nav-number">3.2.2.</span> <span class="nav-text">是不是一定要尽可能使用设计模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设计模式有时并非最优解"><span class="nav-number">3.2.3.</span> <span class="nav-text">设计模式有时并非最优解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设计模式太教条化"><span class="nav-number">3.2.4.</span> <span class="nav-text">设计模式太教条化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#我有自己的一套思路，没必要引导团队成员学习设计模式"><span class="nav-number">3.2.5.</span> <span class="nav-text">我有自己的一套思路，没必要引导团队成员学习设计模式</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Java设计模式系列"><span class="nav-number">4.</span> <span class="nav-text">Java设计模式系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/design_pattern/summary/';
+          this.page.identifier = 'design_pattern/summary/';
+          this.page.title = 'design_pattern/summary/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

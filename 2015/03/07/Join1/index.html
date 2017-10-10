@@ -1,0 +1,1285 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="SQL,sql,sql优化,数据库,PostgreSQL,postgres,join,merge join,hash join,nested loop,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文介绍了Merge Join，Hash Join，Nested Loop这三种数据库Join方式的工作原理，并通过实验进一步说明了其适用范围。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop">
+<meta property="og:url" content="http://www.jasongj.com/2015/03/07/Join1/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文介绍了Merge Join，Hash Join，Nested Loop这三种数据库Join方式的工作原理，并通过实验进一步说明了其适用范围。">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Nest_Explain.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Nest.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Hash_Explain.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Hash.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Merge_Explain.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Merge.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster_Explain.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster_Cluster_Explain.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster_Cluster.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Hash_Explain_No_Index.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Nest_Hash_No_Index.png">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/Join/Query2_Test1_Explain.png">
+<meta property="og:updated_time" content="2017-03-15T13:17:39.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop">
+<meta name="twitter:description" content="本文介绍了Merge Join，Hash Join，Nested Loop这三种数据库Join方式的工作原理，并通过实验进一步说明了其适用范围。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/sql/Join/Nest_Nest_Explain.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/2015/03/07/Join1/"/>
+
+
+
+
+
+  <title>
+  
+    SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop | 技术世界 | SQL,sql,sql优化,数据库,PostgreSQL,postgres,join,merge join,hash join,nested loop,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+    
+  
+
+  <article class="post post-type-normal  post-sticky" itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/2015/03/07/Join1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2015-03-07T21:00:00+08:00">
+                2015-03-07
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-03-15T21:17:39+08:00">
+                2017-03-15
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/" itemprop="url" rel="index">
+                    <span itemprop="name">PostgreSQL</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/" itemprop="url" rel="index">
+                    <span itemprop="name">Database</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/SQL优化/" itemprop="url" rel="index">
+                    <span itemprop="name">SQL优化</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/SQL优化/SQL/" itemprop="url" rel="index">
+                    <span itemprop="name">SQL</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/03/07/Join1/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/2015/03/07/Join1/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2015/03/07/Join1/" class="leancloud_visitors" data-flag-title="SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  3,351
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文介绍了Merge Join，Hash Join，Nested Loop这三种数据库Join方式的工作原理，并通过实验进一步说明了其适用范围。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/03/07/Join1/">原文链接</a>　<a href="http://www.jasongj.com/2015/03/07/Join1">http://www.jasongj.com/2015/03/07/Join1/</a></p>
+</blockquote>
+<h1 id="Nested-Loop，Hash-Join，Merge-Join介绍"><a href="#Nested-Loop，Hash-Join，Merge-Join介绍" class="headerlink" title="Nested Loop，Hash Join，Merge Join介绍"></a>Nested Loop，Hash Join，Merge Join介绍</h1><ul>
+<li><p>Nested Loop:<br>对于被连接的数据子集较小的情况，Nested Loop是个较好的选择。Nested Loop就是扫描一个表（外表），每读到一条记录，就根据Join字段上的索引去另一张表（内表）里面查找，若Join字段上没有索引查询优化器一般就不会选择 Nested Loop。在Nested Loop中，内表（一般是带索引的大表）被外表（也叫“驱动表”，一般为小表——不紧相对其它表为小表，而且记录数的绝对值也较小，不要求有索引）驱动，外表返回的每一行都要在内表中检索找到与它匹配的行，因此整个查询返回的结果集不能太大（大于1 万不适合）。</p>
+</li>
+<li><p>Hash Join:<br>Hash Join是做大数据集连接时的常用方式，优化器使用两个表中较小（相对较小）的表利用Join Key在内存中建立散列表，然后扫描较大的表并探测散列表，找出与Hash表匹配的行。<br>这种方式适用于较小的表完全可以放于内存中的情况，这样总成本就是访问两个表的成本之和。但是在表很大的情况下并不能完全放入内存，这时优化器会将它分割成若干不同的分区，不能放入内存的部分就把该分区写入磁盘的临时段，此时要求有较大的临时段从而尽量提高I/O 的性能。它能够很好的工作于没有索引的大表和并行查询的环境中，并提供最好的性能。大多数人都说它是Join的重型升降机。Hash Join只能应用于等值连接(如WHERE A.COL3 = B.COL4)，这是由Hash的特点决定的。</p>
+</li>
+<li><p>Merge Join:<br>通常情况下Hash Join的效果都比排序合并连接要好，然而如果两表已经被排过序，在执行排序合并连接时不需要再排序了，这时Merge Join的性能会优于Hash Join。Merge join的操作通常分三步：<br>　　1. 对连接的每个表做table access full;<br>　　2. 对table access full的结果进行排序。<br>　　3. 进行merge join对排序结果进行合并。<br>在全表扫描比索引范围扫描再进行表访问更可取的情况下，Merge Join会比Nested Loop性能更佳。当表特别小或特别巨大的时候，实行全表访问可能会比索引范围扫描更有效。Merge Join的性能开销几乎都在前两步。Merge Join可适于于非等值Join（&gt;，&lt;，&gt;=，&lt;=，但是不包含!=，也即&lt;&gt;）</p>
+</li>
+</ul>
+<h1 id="Nested-Loop，Hash-JOin，Merge-Join对比"><a href="#Nested-Loop，Hash-JOin，Merge-Join对比" class="headerlink" title="Nested Loop，Hash JOin，Merge Join对比"></a>Nested Loop，Hash JOin，Merge Join对比</h1><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>Nested Loop</th>
+<th>Hash Join</th>
+<th>Merge Join</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>使用条件</td>
+<td>任何条件</td>
+<td>等值连接（=）</td>
+<td>等值或非等值连接(&gt;，&lt;，=，&gt;=，&lt;=)，‘&lt;&gt;’除外</td>
+</tr>
+<tr>
+<td>相关资源</td>
+<td>CPU、磁盘I/O</td>
+<td>内存、临时空间</td>
+<td>内存、临时空间</td>
+</tr>
+<tr>
+<td>特点</td>
+<td>当有高选择性索引或进行限制性搜索时效率比较高，能够快速返回第一次的搜索结果。</td>
+<td>当缺乏索引或者索引条件模糊时，Hash Join比Nested Loop有效。通常比Merge Join快。在数据仓库环境下，如果表的纪录数多，效率高。</td>
+<td>当缺乏索引或者索引条件模糊时，Merge Join比Nested Loop有效。非等值连接时，Merge Join比Hash Join更有效</td>
+</tr>
+<tr>
+<td>缺点</td>
+<td>当索引丢失或者查询条件限制不够时，效率很低；当表的纪录数多时，效率低。</td>
+<td>为建立哈希表，需要大量内存。第一次的结果返回较慢。</td>
+<td>所有的表都需要排序。它为最优化的吞吐量而设计，并且在结果没有全部找到前不返回数据。</td>
+</tr>
+</tbody>
+</table>
+<h1 id="实验"><a href="#实验" class="headerlink" title="实验"></a>实验</h1><p>本文所做实验均基于PostgreSQL 9.3.5平台</p>
+<h2 id="小于万条记录小表与大表Join"><a href="#小于万条记录小表与大表Join" class="headerlink" title="小于万条记录小表与大表Join"></a>小于万条记录小表与大表Join</h2><p>一张记录数1万以下的小表nbar.mse_test_test，一张大表165万条记录的大表nbar.nbar_test，大表上建有索引</p>
+<h3 id="Query-1-等值Join"><a href="#Query-1-等值Join" class="headerlink" title="Query 1:等值Join"></a><strong>Query 1:</strong>等值Join</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">select</span> </div><div class="line">	<span class="keyword">count</span>(*)</div><div class="line"><span class="keyword">from</span> </div><div class="line">	mse_test_test, </div><div class="line">	nbar_test </div><div class="line"><span class="keyword">where</span> </div><div class="line">	mse_test_test.client_key = nbar_test.client_key;</div></pre></td></tr></table></figure>
+<h4 id="Query-1-Test-1：-查询优化器自动选择Nested-Loop，耗时784-845-ms"><a href="#Query-1-Test-1：-查询优化器自动选择Nested-Loop，耗时784-845-ms" class="headerlink" title="Query 1 Test 1： 查询优化器自动选择Nested Loop，耗时784.845 ms"></a><strong>Query 1 Test 1：</strong> 查询优化器自动选择Nested Loop，耗时784.845 ms</h4><p><img src="http://www.jasongj.com/img/sql/Join/Nest_Nest_Explain.png" alt="Nested loop"></p>
+<p>　　如下图所示，执行器将小表mse_test_test作为外表（驱动表），对于其中的每条记录，通过大表（nbar_test）上的索引匹配相应记录。</p>
+<p> <img src="http://www.jasongj.com/img/sql/Join/Nest_Nest.png" alt="Nested loop"></p>
+<h4 id="Query-1-Test-2：强制使用Hash-Join，耗时1731-836ms"><a href="#Query-1-Test-2：强制使用Hash-Join，耗时1731-836ms" class="headerlink" title="Query 1 Test 2：强制使用Hash Join，耗时1731.836ms"></a><strong>Query 1 Test 2：</strong>强制使用Hash Join，耗时1731.836ms</h4><p><img src="http://www.jasongj.com/img/sql/Join/Nest_Hash_Explain.png" alt="Nested loop join"></p>
+<p>　　如下图所示，执行器选择一张表将其映射成散列表，再遍历另外一张表并从散列表中匹配相应记录。<br><img src="http://www.jasongj.com/img/sql/Join/Nest_Hash.png" alt="Hash join"></p>
+<h4 id="Query-1-Test-3：强制使用Merge-Join，耗时4956-768-ms"><a href="#Query-1-Test-3：强制使用Merge-Join，耗时4956-768-ms" class="headerlink" title="Query 1 Test 3：强制使用Merge Join，耗时4956.768 ms"></a><strong>Query 1 Test 3：</strong>强制使用Merge Join，耗时4956.768 ms</h4><p><img src="http://www.jasongj.com/img/sql/Join/Nest_Merge_Explain.png" alt="Merge join plan"> </p>
+<p>　　如下图所示，执行器先分别对mse_test_test和nbar_test按client_key排序。其中mse_test_test使用快速排序，而nbar_test使用external merge排序，之后对二者进行Merge Join。<br><img src="http://www.jasongj.com/img/sql/Join/Nest_Merge.png" alt="Merge join"></p>
+<h4 id="Query-1-总结-1-："><a href="#Query-1-总结-1-：" class="headerlink" title="Query 1 总结 1 ："></a><strong>Query 1 总结 1 ：</strong></h4><p>通过对比<code>Query 1 Test 1</code>，<code>Query 1 Test 2</code>，<code>Query 1 Test 3</code>可以看出Nested Loop适用于结果集很小（一般要求小于一万条），并且内表在Join字段上建有索引（这点非常非常非常重要）。</p>
+<ul>
+<li><strong>在大表上创建聚簇索引</strong></li>
+</ul>
+<h4 id="Query-1-Test-4：强制使用Merge-Join，耗时1660-228-ms"><a href="#Query-1-Test-4：强制使用Merge-Join，耗时1660-228-ms" class="headerlink" title="Query 1 Test 4：强制使用Merge Join，耗时1660.228 ms"></a><strong>Query 1 Test 4：</strong>强制使用Merge Join，耗时1660.228 ms</h4><p><img src="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster_Explain.png" alt="Merge join"></p>
+<p>　　如下图所示，执行器通过聚簇索引对大表（nbar_test）排序，直接通过快排对无索引的小表（mse_test_test）排序，之后对二才进行Merge Join。<br><img src="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster.png" alt="Merge join"></p>
+<h4 id="Query-1-总结-2："><a href="#Query-1-总结-2：" class="headerlink" title="Query 1 总结 2："></a><strong>Query 1 总结 2：</strong></h4><p>通过对比<code>Query 1 Test 3</code>和<code>Query 1 Test 4</code>可以看出，Merge Join的主要开销是排序开销，如果能通过建立聚簇索引（如果Query必须显示排序），可以极大提高Merge Join的性能。从这两个实验可以看出，创建聚簇索引后，查询时间从4956.768 ms缩减到了1815.238 ms。</p>
+<ul>
+<li><strong>在两表上同时创建聚簇索引</strong></li>
+</ul>
+<h4 id="Query-1-Test-5：强制使用Merge-Join，耗时2575-498-ms。"><a href="#Query-1-Test-5：强制使用Merge-Join，耗时2575-498-ms。" class="headerlink" title="Query 1 Test 5：强制使用Merge Join，耗时2575.498 ms。"></a><strong>Query 1 Test 5：</strong>强制使用Merge Join，耗时2575.498 ms。</h4><p><img src="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster_Cluster_Explain.png" alt="Merge join with cluster index"></p>
+<p>　　如下图所示，执行器通过聚簇索引对大表（nbar_test）和小表（mse_test_test）排序，之后才进行Merge Join。<br><img src="http://www.jasongj.com/img/sql/Join/Nest_Merge_Cluster_Cluster.png" alt="Merge join"></p>
+<h4 id="Query-1-总结-3："><a href="#Query-1-总结-3：" class="headerlink" title="Query 1 总结 3："></a><strong>Query 1 总结 3：</strong></h4><p>对比<code>Query 1 Test 4</code>和<code>Query 1 Test 5</code>，可以看出二者唯一的不同在于对小表（mse_test_test）的访问方式不同，前者使用快排，后者因为聚簇索引的存在而使用Index Only Scan，在表数据量比较小的情况下前者比后者效率更高。由此可看出如果通过索引排序再查找相应的记录比直接在原记录上排序效率还低，则直接在原记录上排序后Merge Join效率更高。</p>
+<ul>
+<li><p><strong>删除nbar_test上的索引</strong></p>
+<h4 id="Query-1-Test-6：强制使用Hash-Join，耗时1815-238-ms"><a href="#Query-1-Test-6：强制使用Hash-Join，耗时1815-238-ms" class="headerlink" title="Query 1 Test 6：强制使用Hash Join，耗时1815.238 ms"></a><strong>Query 1 Test 6：</strong>强制使用Hash Join，耗时1815.238 ms</h4><p>时间与<code>Query 1 Test 2</code>几乎相等。<br><img src="http://www.jasongj.com/img/sql/Join/Nest_Hash_Explain_No_Index.png" alt="Hash join without index"> </p>
+<p> 如下图所示，与<code>Query 1 Test 2</code>相同，执行器选择一张表将其映射成散列表，再遍历另外一张表并从散列表中匹配相应记录。<br><img src="http://www.jasongj.com/img/sql/Join/Nest_Hash_No_Index.png" alt="Hash join"></p>
+</li>
+</ul>
+<h4 id="Query-1-总结-4-："><a href="#Query-1-总结-4-：" class="headerlink" title="Query 1 总结 4 ："></a><strong>Query 1 总结 4 ：</strong></h4><p>通过对比<code>Query 1 Test 2</code>，<code>Query 1 Test 6</code>可以看出Hash Join不要求表在Join字段上建立索引。</p>
+<h2 id="两大表Join"><a href="#两大表Join" class="headerlink" title="两大表Join"></a>两大表Join</h2><p>mse_test约100万条记录，nbar_test约165万条记录</p>
+<p>###<strong>Query 2:</strong>不等值Join<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">   <span class="keyword">select</span> </div><div class="line">   	<span class="keyword">count</span>(*)</div><div class="line">   <span class="keyword">from</span> </div><div class="line">   	mse_test, </div><div class="line">   	nbar_test </div><div class="line">   <span class="keyword">where</span> </div><div class="line">   	mse_test.client_key = nbar_test.client_key</div><div class="line"><span class="keyword">and</span></div><div class="line">	mse_test.client_key <span class="keyword">between</span> <span class="number">100000</span> <span class="keyword">and</span> <span class="number">300000</span>;</div></pre></td></tr></table></figure></p>
+<h4 id="Query-2-Test-1：强制使用Hash-Join，失败"><a href="#Query-2-Test-1：强制使用Hash-Join，失败" class="headerlink" title="Query 2 Test 1：强制使用Hash Join，失败"></a><strong>Query 2 Test 1：</strong>强制使用Hash Join，失败</h4><p>本次实验通过设置<code>enable_hashjoin=true</code>，<code>enable_nestloop=false</code>，<code>enable_mergejoin=false</code>来试图强制使用Hash Join，但是失败了。<br><img src="http://www.jasongj.com/img/sql/Join/Query2_Test1_Explain.png" alt="Nested loop"></p>
+<h1 id="SQL优化系列"><a href="#SQL优化系列" class="headerlink" title="SQL优化系列"></a>SQL优化系列</h1><ul>
+<li><a href="http://www.jasongj.com/2015/03/07/Join1/">SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop</a></li>
+<li><a href="http://www.jasongj.com/2015/03/15/count_distinct/">SQL优化（二） 快速计算Distinct Count</a></li>
+<li><a href="http://www.jasongj.com/2015/12/13/SQL3_partition/">SQL优化（三） PostgreSQL Table Partitioning</a></li>
+<li><a href="http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/">SQL优化（四） Postgre Sql存储过程</a></li>
+<li><a href="http://www.jasongj.com/sql/cte/">SQL优化（五） PostgreSQL （递归）CTE 通用表表达式</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: '2015/03/07/Join1/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          
+            <a href="/tags/Database/" rel="tag"># Database</a>
+          
+            <a href="/tags/SQL优化/" rel="tag"># SQL优化</a>
+          
+            <a href="/tags/SQL/" rel="tag"># SQL</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/01/25/Disruptor高性能异步处理框架/" rel="next" title="Java高性能异步处理框架-Disruptor">
+                <i class="fa fa-chevron-left"></i> Java高性能异步处理框架-Disruptor
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/03/10/KafkaColumn1/" rel="prev" title="Kafka设计解析（一）- Kafka背景及架构介绍">
+                Kafka设计解析（一）- Kafka背景及架构介绍 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/2015/03/07/Join1/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/2015/03/07/Join1/'),
+                identifier: decodeURI('/2015/03/07/Join1/'),
+                title: 'SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop',
+                slug: '2015/03/07/Join1/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Nested-Loop，Hash-Join，Merge-Join介绍"><span class="nav-number">1.</span> <span class="nav-text">Nested Loop，Hash Join，Merge Join介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Nested-Loop，Hash-JOin，Merge-Join对比"><span class="nav-number">2.</span> <span class="nav-text">Nested Loop，Hash JOin，Merge Join对比</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#实验"><span class="nav-number">3.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#小于万条记录小表与大表Join"><span class="nav-number">3.1.</span> <span class="nav-text">小于万条记录小表与大表Join</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Query-1-等值Join"><span class="nav-number">3.1.1.</span> <span class="nav-text">Query 1:等值Join</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-Test-1：-查询优化器自动选择Nested-Loop，耗时784-845-ms"><span class="nav-number">3.1.1.1.</span> <span class="nav-text">Query 1 Test 1： 查询优化器自动选择Nested Loop，耗时784.845 ms</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-Test-2：强制使用Hash-Join，耗时1731-836ms"><span class="nav-number">3.1.1.2.</span> <span class="nav-text">Query 1 Test 2：强制使用Hash Join，耗时1731.836ms</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-Test-3：强制使用Merge-Join，耗时4956-768-ms"><span class="nav-number">3.1.1.3.</span> <span class="nav-text">Query 1 Test 3：强制使用Merge Join，耗时4956.768 ms</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-总结-1-："><span class="nav-number">3.1.1.4.</span> <span class="nav-text">Query 1 总结 1 ：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-Test-4：强制使用Merge-Join，耗时1660-228-ms"><span class="nav-number">3.1.1.5.</span> <span class="nav-text">Query 1 Test 4：强制使用Merge Join，耗时1660.228 ms</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-总结-2："><span class="nav-number">3.1.1.6.</span> <span class="nav-text">Query 1 总结 2：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-Test-5：强制使用Merge-Join，耗时2575-498-ms。"><span class="nav-number">3.1.1.7.</span> <span class="nav-text">Query 1 Test 5：强制使用Merge Join，耗时2575.498 ms。</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-总结-3："><span class="nav-number">3.1.1.8.</span> <span class="nav-text">Query 1 总结 3：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-Test-6：强制使用Hash-Join，耗时1815-238-ms"><span class="nav-number">3.1.1.9.</span> <span class="nav-text">Query 1 Test 6：强制使用Hash Join，耗时1815.238 ms</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-1-总结-4-："><span class="nav-number">3.1.1.10.</span> <span class="nav-text">Query 1 总结 4 ：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#两大表Join"><span class="nav-number">3.2.</span> <span class="nav-text">两大表Join</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Query-2-Test-1：强制使用Hash-Join，失败"><span class="nav-number">3.2.0.1.</span> <span class="nav-text">Query 2 Test 1：强制使用Hash Join，失败</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SQL优化系列"><span class="nav-number">4.</span> <span class="nav-text">SQL优化系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/2015/03/07/Join1/';
+          this.page.identifier = '2015/03/07/Join1/';
+          this.page.title = '2015/03/07/Join1/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

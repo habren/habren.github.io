@@ -1,0 +1,1213 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="jdk 动态代理,cglib,动态代理 cglib,AOP cglib,AOP 动态代理,java 设计模式,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="Spring的AOP有JDK动态代理和cglib两种实现方式。JDK动态代理要求被代理对象实现接口；cglib通过动态继承实现，因此不能代理被final修饰的类；JDK动态代理生成代理对象速度比cglib快；cglib生成的代理对象比JDK动态代理生成的代理对象执行效率高。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java设计模式（七） Spring AOP  JDK动态代理 vs. Cglib">
+<meta property="og:url" content="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="Spring的AOP有JDK动态代理和cglib两种实现方式。JDK动态代理要求被代理对象实现接口；cglib通过动态继承实现，因此不能代理被final修饰的类；JDK动态代理生成代理对象速度比cglib快；cglib生成的代理对象比JDK动态代理生成的代理对象执行效率高。">
+<meta property="og:updated_time" content="2017-02-17T12:31:23.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java设计模式（七） Spring AOP  JDK动态代理 vs. Cglib">
+<meta name="twitter:description" content="Spring的AOP有JDK动态代理和cglib两种实现方式。JDK动态代理要求被代理对象实现接口；cglib通过动态继承实现，因此不能代理被final修饰的类；JDK动态代理生成代理对象速度比cglib快；cglib生成的代理对象比JDK动态代理生成的代理对象执行效率高。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/"/>
+
+
+
+
+
+  <title>
+  
+    Java设计模式（七） Spring AOP  JDK动态代理 vs. Cglib | 技术世界 | jdk 动态代理,cglib,动态代理 cglib,AOP cglib,AOP 动态代理,java 设计模式,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Java设计模式（七） Spring AOP  JDK动态代理 vs. Cglib
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-05-02T20:42:46+08:00">
+                2016-05-02
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-02-17T20:31:23+08:00">
+                2017-02-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/设计模式/" itemprop="url" rel="index">
+                    <span itemprop="name">设计模式</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/设计模式/Design-Pattern/" itemprop="url" rel="index">
+                    <span itemprop="name">Design Pattern</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/design_pattern/dynamic_proxy_cglib/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/design_pattern/dynamic_proxy_cglib/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/design_pattern/dynamic_proxy_cglib/" class="leancloud_visitors" data-flag-title="Java设计模式（七） Spring AOP  JDK动态代理 vs. Cglib">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  7,259
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  Spring的AOP有JDK动态代理和cglib两种实现方式。JDK动态代理要求被代理对象实现接口；cglib通过动态继承实现，因此不能代理被final修饰的类；JDK动态代理生成代理对象速度比cglib快；cglib生成的代理对象比JDK动态代理生成的代理对象执行效率高。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/">原文链接</a>　<a href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/">http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/</a></p>
+</blockquote>
+<h1 id="静态代理-VS-动态代理"><a href="#静态代理-VS-动态代理" class="headerlink" title="静态代理 VS. 动态代理"></a>静态代理 VS. 动态代理</h1><p>静态代理，是指程序运行前就已经存在了代理类的字节码文件，代理类和被代理类的关系在运行前就已经确定。</p>
+<p>上一篇文章《<a href="http://www.jasongj.com/design_pattern/proxy_decorator/">Java设计模式（六） 代理模式 VS. 装饰模式</a>》所讲的代理为静态代理。如上文所讲，一个静态代理类只代理一个具体类。如果需要对实现了同一接口的不同具体类作代理，静态代理需要为每一个具体类创建相应的代理类。</p>
+<p>动态代理类的字节码是在程序运行期间动态生成，所以不存在代理类的字节码文件。代理类和被代理类的关系是在程序运行时确定的。</p>
+<h1 id="JDK动态代理"><a href="#JDK动态代理" class="headerlink" title="JDK动态代理"></a>JDK动态代理</h1><p>JDK从1.3开始引入动态代理。可通过<code>java.lang.reflect.Proxy</code>类的静态方法<code>Proxy.newProxyInstance</code>动态创建代理类和实例。并且由它动态创建出来的代理类都是Proxy类的子类。</p>
+<h2 id="定义代理行为"><a href="#定义代理行为" class="headerlink" title="定义代理行为"></a>定义代理行为</h2><p>代理类往往会在代理对象业务逻辑前后增加一些功能性的行为，如使用事务或者打印日志。本文把这些行为称之为<strong><em>代理行为</em></strong>。</p>
+<p>使用JDK动态代理，需要创建一个实现<code>java.lang.reflect.InvocationHandler</code>接口的类，并在该类中定义代理行为。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.proxy.jdkproxy;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.lang.reflect.InvocationHandler;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.Method;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SubjectProxyHandler</span> <span class="keyword">implements</span> <span class="title">InvocationHandler</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(SubjectProxyHandler.class);</div><div class="line"></div><div class="line">  <span class="keyword">private</span> Object target;</div><div class="line">  </div><div class="line">  <span class="meta">@SuppressWarnings</span>(<span class="string">"rawtypes"</span>)</div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="title">SubjectProxyHandler</span><span class="params">(Class clazz)</span> </span>&#123;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      <span class="keyword">this</span>.target = clazz.newInstance();</div><div class="line">    &#125; <span class="keyword">catch</span> (InstantiationException | IllegalAccessException ex) &#123;</div><div class="line">      LOG.error(<span class="string">"Create proxy for &#123;&#125; failed"</span>, clazz.getName());</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object proxy, Method method, Object[] args)</span> <span class="keyword">throws</span> Throwable </span>&#123;</div><div class="line">    preAction();</div><div class="line">    Object result = method.invoke(target, args);</div><div class="line">    postAction();</div><div class="line">    LOG.info(<span class="string">"Proxy class name &#123;&#125;"</span>, proxy.getClass().getName());</div><div class="line">    <span class="keyword">return</span> result;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">preAction</span><span class="params">()</span> </span>&#123;</div><div class="line">    LOG.info(<span class="string">"SubjectProxyHandler.preAction()"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">postAction</span><span class="params">()</span> </span>&#123;</div><div class="line">    LOG.info(<span class="string">"SubjectProxyHandler.postAction()"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>从上述代码中可以看到，被代理对象的类对象作为参数传给了构造方法，原因如下</p>
+<ul>
+<li>如上文所述，动态代理可以代理多种类，而且具体代理哪种类并非台静态代理那样编译时确定，而是在运行时指定</li>
+<li>之所以不传被代理类的实例而是传类对象，是为了与上文《<a href="http://www.jasongj.com/design_pattern/proxy_decorator/">Java设计模式（六） 代理模式 VS. 装饰模式</a>》吻合——被代理对象不由客户端创建而由代理创建，客户端甚至都不需要知道被代理对象的存在。具体传被代理类的实例还是传类对象，并无严格规定</li>
+<li>一些讲JDK动态代理的例子会专门使用一个public方法去接收该参数。但笔者个人认为最好不要在具体类中实现未出现在接口定义中的public方法</li>
+</ul>
+<p>注意，SubjectProxyHandler定义的是代理行为而非代理类本身。实际上代理类及其实例是在运行时通过反射动态创建出来的。</p>
+<h2 id="JDK动态代理使用方式"><a href="#JDK动态代理使用方式" class="headerlink" title="JDK动态代理使用方式"></a>JDK动态代理使用方式</h2><p>代理行为定义好后，先实例化SubjectProxyHandler（在构造方法中指明被代理类），然后通过Proxy.newProxyInstance动态创建代理类的实例。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.lang.reflect.InvocationHandler;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.Proxy;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.proxy.jdkproxy.SubjectProxyHandler;</div><div class="line"><span class="keyword">import</span> com.jasongj.subject.ConcreteSubject;</div><div class="line"><span class="keyword">import</span> com.jasongj.subject.ISubject;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JDKDynamicProxyClient</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    InvocationHandler handler = <span class="keyword">new</span> SubjectProxyHandler(ConcreteSubject.class);</div><div class="line">    ISubject proxy =</div><div class="line">        (ISubject) Proxy.newProxyInstance(JDKDynamicProxyClient.class.getClassLoader(),</div><div class="line">            <span class="keyword">new</span> Class[] &#123;ISubject.class&#125;, handler);</div><div class="line">    proxy.action();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>从上述代码中也可以看到，Proxy.newProxyInstance的第二个参数是类对象数组，也就意味着被代理对象可以实现多个接口。</p>
+<p>运行结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">SubjectProxyHandler.preAction()</div><div class="line">ConcreteSubject action()</div><div class="line">SubjectProxyHandler.postAction()</div><div class="line">Proxy class name com.sun.proxy.$Proxy18</div></pre></td></tr></table></figure></p>
+<p>从上述结果可以看到，定义的代理行为顺利的加入到了执行逻辑中。同时，最后一行日志说明了代理类的类名是<code>com.sun.proxy.$Proxy18</code>，验证了上文的论点——SubjectProxyHandler定义的是代理行为而非代理类本身，代理类及其实例是在运行时通过反射动态创建出来的。</p>
+<h2 id="生成的动态代理类"><a href="#生成的动态代理类" class="headerlink" title="生成的动态代理类"></a>生成的动态代理类</h2><p>Proxy.newProxyInstance是通过静态方法<code>ProxyGenerator.generateProxyClass</code>动态生成代理类的字节码的。为了观察创建出来的代理类的结构，本文手工调用该方法，得到了代理类的字节码，并将之输出到了class文件中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">byte</span>[] classFile = ProxyGenerator.generateProxyClass(<span class="string">"$Proxy18"</span>, ConcreteSubject.class.getInterfaces());</div></pre></td></tr></table></figure>
+<p>使用反编译工具可以得到代理类的代码<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> com.jasongj.subject.ISubject;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.InvocationHandler;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.Method;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.Proxy;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.UndeclaredThrowableException;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> $<span class="title">Proxy17</span> <span class="keyword">extends</span> <span class="title">Proxy</span> <span class="keyword">implements</span> <span class="title">ISubject</span> </span>&#123;</div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Method m1;</div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Method m2;</div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Method m0;</div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Method m3;</div><div class="line"></div><div class="line">  <span class="keyword">public</span> $Proxy17(InvocationHandler paramInvocationHandler) &#123;</div><div class="line">    <span class="keyword">super</span>(paramInvocationHandler);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object paramObject)</span> </span>&#123;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      <span class="keyword">return</span> ((Boolean) <span class="keyword">this</span>.h.invoke(<span class="keyword">this</span>, m1, <span class="keyword">new</span> Object[] &#123;paramObject&#125;)).booleanValue();</div><div class="line">    &#125; <span class="keyword">catch</span> (Error | RuntimeException localError) &#123;</div><div class="line">      <span class="keyword">throw</span> localError;</div><div class="line">    &#125; <span class="keyword">catch</span> (Throwable localThrowable) &#123;</div><div class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> UndeclaredThrowableException(localThrowable);</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      <span class="keyword">return</span> (String) <span class="keyword">this</span>.h.invoke(<span class="keyword">this</span>, m2, <span class="keyword">null</span>);</div><div class="line">    &#125; <span class="keyword">catch</span> (Error | RuntimeException localError) &#123;</div><div class="line">      <span class="keyword">throw</span> localError;</div><div class="line">    &#125; <span class="keyword">catch</span> (Throwable localThrowable) &#123;</div><div class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> UndeclaredThrowableException(localThrowable);</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">hashCode</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      <span class="keyword">return</span> ((Integer) <span class="keyword">this</span>.h.invoke(<span class="keyword">this</span>, m0, <span class="keyword">null</span>)).intValue();</div><div class="line">    &#125; <span class="keyword">catch</span> (Error | RuntimeException localError) &#123;</div><div class="line">      <span class="keyword">throw</span> localError;</div><div class="line">    &#125; <span class="keyword">catch</span> (Throwable localThrowable) &#123;</div><div class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> UndeclaredThrowableException(localThrowable);</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">action</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      <span class="keyword">this</span>.h.invoke(<span class="keyword">this</span>, m3, <span class="keyword">null</span>);</div><div class="line">      <span class="keyword">return</span>;</div><div class="line">    &#125; <span class="keyword">catch</span> (Error | RuntimeException localError) &#123;</div><div class="line">      <span class="keyword">throw</span> localError;</div><div class="line">    &#125; <span class="keyword">catch</span> (Throwable localThrowable) &#123;</div><div class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> UndeclaredThrowableException(localThrowable);</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="keyword">static</span> &#123;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      m1 = Class.forName(<span class="string">"java.lang.Object"</span>).getMethod(<span class="string">"equals"</span>,</div><div class="line">          <span class="keyword">new</span> Class[] &#123;Class.forName(<span class="string">"java.lang.Object"</span>)&#125;);</div><div class="line">      m2 = Class.forName(<span class="string">"java.lang.Object"</span>).getMethod(<span class="string">"toString"</span>, <span class="keyword">new</span> Class[<span class="number">0</span>]);</div><div class="line">      m0 = Class.forName(<span class="string">"java.lang.Object"</span>).getMethod(<span class="string">"hashCode"</span>, <span class="keyword">new</span> Class[<span class="number">0</span>]);</div><div class="line">      m3 = Class.forName(<span class="string">"com.jasongj.subject.ISubject"</span>).getMethod(<span class="string">"action"</span>, <span class="keyword">new</span> Class[<span class="number">0</span>]);</div><div class="line">    &#125; <span class="keyword">catch</span> (NoSuchMethodException localNoSuchMethodException) &#123;</div><div class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> NoSuchMethodError(localNoSuchMethodException.getMessage());</div><div class="line">    &#125; <span class="keyword">catch</span> (ClassNotFoundException localClassNotFoundException) &#123;</div><div class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> NoClassDefFoundError(localClassNotFoundException.getMessage());</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>从该类的声明中可以看到，继承了Proxy类，并实现了ISubject接口。验证了上文中的论点——所有生成的动态代理类都是Proxy类的子类。同时也解释了为什么JDK动态代理只能代理实现了接口的类——Java不支持多继承，代理类已经继承了Proxy类，无法再继承其它类。</p>
+<p>同时，代理类重写了hashCode，toString和equals这三个从Object继承下来的接口，通过InvocationHandler的invoke方法去实现。除此之外，该代理类还实现了ISubject接口的action方法，也是通过InvocationHandler的invoke方法去实现。这就解释了示例代码中代理行为是怎样被调用的。</p>
+<p>前文提到，被代理类可以实现多个接口。从代理类代码中可以看到，代理类是通过InvocationHandler的invoke方法去实现代理接口的。所以当被代理对象实现了多个接口并且希望对不同接口实施不同的代理行为时，应该在SubjectProxyHandler类，也即代理行为定义类中，通过判断方法名，实现不同的代理行为。</p>
+<h1 id="cglib"><a href="#cglib" class="headerlink" title="cglib"></a>cglib</h1><h2 id="cglib介绍"><a href="#cglib介绍" class="headerlink" title="cglib介绍"></a>cglib介绍</h2><p>cglib是一个强大的高性能代码生成库，它的底层是通过使用一个小而快的字节码处理框架ASM（Java字节码操控框架）来转换字节码并生成新的类。</p>
+<h2 id="cglib方法拦截器"><a href="#cglib方法拦截器" class="headerlink" title="cglib方法拦截器"></a>cglib方法拦截器</h2><p>使用cglib实现动态代理，需要在MethodInterceptor实现类中定义代理行为。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.proxy.cglibproxy;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.lang.reflect.Method;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> net.sf.cglib.proxy.MethodInterceptor;</div><div class="line"><span class="keyword">import</span> net.sf.cglib.proxy.MethodProxy;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SubjectInterceptor</span> <span class="keyword">implements</span> <span class="title">MethodInterceptor</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(SubjectInterceptor.class);</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> Object <span class="title">intercept</span><span class="params">(Object obj, Method method, Object[] args, MethodProxy proxy)</span></span></div><div class="line">      <span class="keyword">throws</span> Throwable &#123;</div><div class="line">    preAction();</div><div class="line">    Object result = proxy.invokeSuper(obj, args);</div><div class="line">    postAction();</div><div class="line">    <span class="keyword">return</span> result;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">preAction</span><span class="params">()</span> </span>&#123;</div><div class="line">    LOG.info(<span class="string">"SubjectProxyHandler.preAction()"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">postAction</span><span class="params">()</span> </span>&#123;</div><div class="line">    LOG.info(<span class="string">"SubjectProxyHandler.postAction()"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>代理行为在intercept方法中定义，同时通过getInstance方法（该方法名可以自定义）获取动态代理的实例，并且可以通过向该方法传入类对象指定被代理对象的类型。</p>
+<h2 id="cglib使用方式"><a href="#cglib使用方式" class="headerlink" title="cglib使用方式"></a>cglib使用方式</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.proxy.cglibproxy.SubjectInterceptor;</div><div class="line"><span class="keyword">import</span> com.jasongj.subject.ConcreteSubject;</div><div class="line"><span class="keyword">import</span> com.jasongj.subject.ISubject;</div><div class="line"></div><div class="line"><span class="keyword">import</span> net.sf.cglib.proxy.Enhancer;</div><div class="line"><span class="keyword">import</span> net.sf.cglib.proxy.MethodInterceptor;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CgLibProxyClient</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    MethodInterceptor methodInterceptor = <span class="keyword">new</span> SubjectInterceptor();</div><div class="line">    Enhancer enhancer = <span class="keyword">new</span> Enhancer();</div><div class="line">    enhancer.setSuperclass(ConcreteSubject.class);</div><div class="line">    enhancer.setCallback(methodInterceptor);</div><div class="line">    ISubject subject = (ISubject)enhancer.create();</div><div class="line">    subject.action();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h1 id="性能测试"><a href="#性能测试" class="headerlink" title="性能测试"></a>性能测试</h1><p>分别使用JDK动态代理创建代理对象1亿次，并分别执行代理对象方法10亿次，代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.io.IOException;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.InvocationHandler;</div><div class="line"><span class="keyword">import</span> java.lang.reflect.Proxy;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.proxy.cglibproxy.SubjectInterceptor;</div><div class="line"><span class="keyword">import</span> com.jasongj.proxy.jdkproxy.SubjectProxyHandler;</div><div class="line"><span class="keyword">import</span> com.jasongj.subject.ConcreteSubject;</div><div class="line"><span class="keyword">import</span> com.jasongj.subject.ISubject;</div><div class="line"></div><div class="line"><span class="keyword">import</span> net.sf.cglib.proxy.Enhancer;</div><div class="line"><span class="keyword">import</span> net.sf.cglib.proxy.MethodInterceptor;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DynamicProxyPerfClient</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(DynamicProxyPerfClient.class);</div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> creation = <span class="number">100000000</span>;</div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> execution = <span class="number">1000000000</span>;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException </span>&#123;</div><div class="line">    testJDKDynamicCreation();</div><div class="line">    testJDKDynamicExecution();</div><div class="line">    testCglibCreation();</div><div class="line">    testCglibExecution();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testJDKDynamicCreation</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">long</span> start = System.currentTimeMillis();</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; creation; i++) &#123;</div><div class="line">      InvocationHandler handler = <span class="keyword">new</span> SubjectProxyHandler(ConcreteSubject.class);</div><div class="line">      Proxy.newProxyInstance(DynamicProxyPerfClient.class.getClassLoader(),</div><div class="line">          <span class="keyword">new</span> Class[] &#123;ISubject.class&#125;, handler);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">long</span> stop = System.currentTimeMillis();</div><div class="line">    LOG.info(<span class="string">"JDK creation time : &#123;&#125; ms"</span>, stop - start);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testJDKDynamicExecution</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">long</span> start = System.currentTimeMillis();</div><div class="line">    InvocationHandler handler = <span class="keyword">new</span> SubjectProxyHandler(ConcreteSubject.class);</div><div class="line">    ISubject subject =</div><div class="line">        (ISubject) Proxy.newProxyInstance(DynamicProxyPerfClient.class.getClassLoader(),</div><div class="line">            <span class="keyword">new</span> Class[] &#123;ISubject.class&#125;, handler);</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; execution; i++) &#123;</div><div class="line">      subject.action();</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">long</span> stop = System.currentTimeMillis();</div><div class="line">    LOG.info(<span class="string">"JDK execution time : &#123;&#125; ms"</span>, stop - start);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testCglibCreation</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">long</span> start = System.currentTimeMillis();</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; creation; i++) &#123;</div><div class="line">      MethodInterceptor methodInterceptor = <span class="keyword">new</span> SubjectInterceptor();</div><div class="line">      Enhancer enhancer = <span class="keyword">new</span> Enhancer();</div><div class="line">      enhancer.setSuperclass(ConcreteSubject.class);</div><div class="line">      enhancer.setCallback(methodInterceptor);</div><div class="line">      enhancer.create();</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">long</span> stop = System.currentTimeMillis();</div><div class="line">    LOG.info(<span class="string">"cglib creation time : &#123;&#125; ms"</span>, stop - start);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testCglibExecution</span><span class="params">()</span> </span>&#123;</div><div class="line">    MethodInterceptor methodInterceptor = <span class="keyword">new</span> SubjectInterceptor();</div><div class="line">    Enhancer enhancer = <span class="keyword">new</span> Enhancer();</div><div class="line">    enhancer.setSuperclass(ConcreteSubject.class);</div><div class="line">    enhancer.setCallback(methodInterceptor);</div><div class="line">    ISubject subject = (ISubject) enhancer.create();</div><div class="line">    <span class="keyword">long</span> start = System.currentTimeMillis();</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; execution; i++) &#123;</div><div class="line">      subject.action();</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">long</span> stop = System.currentTimeMillis();</div><div class="line">    LOG.info(<span class="string">"cglib execution time : &#123;&#125; ms"</span>, stop - start);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">JDK creation time : 9924 ms</div><div class="line">JDK execution time : 3472 ms</div><div class="line">cglib creation time : 16108 ms</div><div class="line">cglib execution time : 6309 ms</div></pre></td></tr></table></figure></p>
+<p>该性能测试表明，JDK动态代理创建代理对象速度是cglib的约1.6倍，并且JDK创建出的代理对象执行速度是cglib代理对象执行速度的约1.8倍</p>
+<h1 id="JDK动态代理与cglib对比"><a href="#JDK动态代理与cglib对比" class="headerlink" title="JDK动态代理与cglib对比"></a>JDK动态代理与cglib对比</h1><ul>
+<li>字节码创建方式：JDK动态代理通过JVM实现代理类字节码的创建，cglib通过ASM创建字节码</li>
+<li>对被代理对象的要求：JDK动态代理要求被代理对象实现接口，cglib要求被代理对象未被final修饰</li>
+<li>代理对象创建速度：JDK动态代理创建代理对象速度比cglib快</li>
+<li>代理对象执行速度：JDK动态代理代理对象执行速度比cglib快</li>
+</ul>
+<p>本文所有示例代理均可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/DynamicProxy" target="_blank" rel="external">作者Github</a>下载</p>
+<h1 id="Java设计模式系列"><a href="#Java设计模式系列" class="headerlink" title="Java设计模式系列"></a>Java设计模式系列</h1><ul>
+<li><a href="http://www.jasongj.com/design_pattern/simple_factory/">Java设计模式（一） 简单工厂模式不简单</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/factory_method/">Java设计模式（二） 工厂方法模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/abstract_factory/">Java设计模式（三） 抽象工厂模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/observer/">Java设计模式（四） 观察者模式 </a></li>
+<li><a href="http://www.jasongj.com/design_pattern/composite/">Java设计模式（五） 组合模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/proxy_decorator/">Java设计模式（六） 代理模式 VS. 装饰模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/">Java设计模式（七） Spring AOP JDK动态代理 vs. cglib</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/adapter/">Java设计模式（八） 适配器模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/bridge/">Java设计模式（九） 桥接模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/singleton/">Java设计模式（十） 你真的用对单例模式了吗？</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/flyweight/">Java设计模式（十一） 享元模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/strategy/">Java设计模式（十二） 策略模式</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'design_pattern/dynamic_proxy_cglib/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"># Java</a>
+          
+            <a href="/tags/设计模式/" rel="tag"># 设计模式</a>
+          
+            <a href="/tags/Design-Pattern/" rel="tag"># Design Pattern</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/design_pattern/proxy_decorator/" rel="next" title="Java设计模式（六） 代理模式 vs. 装饰模式">
+                <i class="fa fa-chevron-left"></i> Java设计模式（六） 代理模式 vs. 装饰模式
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/design_pattern/adapter/" rel="prev" title="Java设计模式（八） 适配器模式">
+                Java设计模式（八） 适配器模式 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/design_pattern/dynamic_proxy_cglib/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/design_pattern/dynamic_proxy_cglib/'),
+                identifier: decodeURI('/design_pattern/dynamic_proxy_cglib/'),
+                title: 'Java设计模式（七） Spring AOP  JDK动态代理 vs. Cglib',
+                slug: 'design_pattern/dynamic_proxy_cglib/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#静态代理-VS-动态代理"><span class="nav-number">1.</span> <span class="nav-text">静态代理 VS. 动态代理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#JDK动态代理"><span class="nav-number">2.</span> <span class="nav-text">JDK动态代理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#定义代理行为"><span class="nav-number">2.1.</span> <span class="nav-text">定义代理行为</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JDK动态代理使用方式"><span class="nav-number">2.2.</span> <span class="nav-text">JDK动态代理使用方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#生成的动态代理类"><span class="nav-number">2.3.</span> <span class="nav-text">生成的动态代理类</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#cglib"><span class="nav-number">3.</span> <span class="nav-text">cglib</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#cglib介绍"><span class="nav-number">3.1.</span> <span class="nav-text">cglib介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cglib方法拦截器"><span class="nav-number">3.2.</span> <span class="nav-text">cglib方法拦截器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cglib使用方式"><span class="nav-number">3.3.</span> <span class="nav-text">cglib使用方式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#性能测试"><span class="nav-number">4.</span> <span class="nav-text">性能测试</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#JDK动态代理与cglib对比"><span class="nav-number">5.</span> <span class="nav-text">JDK动态代理与cglib对比</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Java设计模式系列"><span class="nav-number">6.</span> <span class="nav-text">Java设计模式系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/';
+          this.page.identifier = 'design_pattern/dynamic_proxy_cglib/';
+          this.page.title = 'design_pattern/dynamic_proxy_cglib/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

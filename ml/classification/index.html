@@ -1,0 +1,1437 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="机器学习,Machine Learning,人工智能,AI,随机森林,逻辑回归,决策树,Ensemble Learning,分类,郭俊 Jason,技术世界,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文详述了如何通过数据预览，探索式数据分析，缺失数据填补，删除关联特征以及派生新特征等方法，在Kaggle的Titanic幸存预测这一分类问题竞赛中获得前2%排名的具体方法。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器学习（二） 如何做到Kaggle排名前2%">
+<meta property="og:url" content="http://www.jasongj.com/ml/classification/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文详述了如何通过数据预览，探索式数据分析，缺失数据填补，删除关联特征以及派生新特征等方法，在Kaggle的Titanic幸存预测这一分类问题竞赛中获得前2%排名的具体方法。">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Pclass-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Title-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Sex-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Age-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20SibSp-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Parch-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20FamilySize-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20TicketCount-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Fare-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Cabin-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Embarked-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/Fare%20median%20value%20of%20each%20Embarked%20and%20Pclass-1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/ml/classification/kaggle_rank.png">
+<meta property="og:updated_time" content="2017-05-13T00:25:14.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="机器学习（二） 如何做到Kaggle排名前2%">
+<meta name="twitter:description" content="本文详述了如何通过数据预览，探索式数据分析，缺失数据填补，删除关联特征以及派生新特征等方法，在Kaggle的Titanic幸存预测这一分类问题竞赛中获得前2%排名的具体方法。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Pclass-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/ml/classification/"/>
+
+
+
+
+
+  <title>
+  
+    如何做到机器学习竞赛Kaggle排名前2%  Titanic 80% 随机森林 决策树 | 技术世界 | 机器学习,Machine Learning,人工智能,AI,随机森林,逻辑回归,决策树,Ensemble Learning,分类,郭俊 Jason,技术世界,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/ml/classification/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                机器学习（二） 如何做到Kaggle排名前2%
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-12T07:02:13+08:00">
+                2017-04-12
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-05-13T08:25:14+08:00">
+                2017-05-13
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/machine-learning/" itemprop="url" rel="index">
+                    <span itemprop="name">machine learning</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/machine-learning/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/machine-learning/机器学习/AI/" itemprop="url" rel="index">
+                    <span itemprop="name">AI</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/ml/classification/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/ml/classification/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/ml/classification/" class="leancloud_visitors" data-flag-title="机器学习（二） 如何做到Kaggle排名前2%">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  11,563
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文详述了如何通过数据预览，探索式数据分析，缺失数据填补，删除关联特征以及派生新特征等方法，在Kaggle的Titanic幸存预测这一分类问题竞赛中获得前2%排名的具体方法。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/ml/classification/">原文链接</a> <a href="http://www.jasongj.com/ml/classification/">http://www.jasongj.com/ml/classification/</a></p>
+</blockquote>
+<h1 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h1><p>本文详述了如何通过数据预览，探索式数据分析，缺失数据填补，删除关联特征以及派生新特征等方法，在<a href="https://www.kaggle.com/c/titanic" title="Kaggle的Titanic幸存预测" target="_blank" rel="external nofollow">Kaggle的Titanic幸存预测</a>这一分类问题竞赛中获得前2%排名的具体方法。  </p>
+<h1 id="竞赛内容介绍"><a href="#竞赛内容介绍" class="headerlink" title="竞赛内容介绍"></a>竞赛内容介绍</h1><p><a href="https://www.kaggle.com/c/titanic" title="Kaggle的Titanic幸存预测" target="_blank" rel="external nofollow">Titanic幸存预测</a>是Kaggle上参赛人数最多的竞赛之一。它要求参赛选手通过训练数据集分析出什么类型的人更可能幸存，并预测出测试数据集中的所有乘客是否生还。</p>
+<p>该项目是一个二元分类问题</p>
+<h1 id="如何取得排名前2-的成绩"><a href="#如何取得排名前2-的成绩" class="headerlink" title="如何取得排名前2%的成绩"></a>如何取得排名前2%的成绩</h1><h2 id="加载数据"><a href="#加载数据" class="headerlink" title="加载数据"></a>加载数据</h2><p>在加载数据之前，先通过如下代码加载之后会用到的所有R库</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">library</span>(readr) <span class="comment"># File read / write</span></div><div class="line"><span class="keyword">library</span>(ggplot2) <span class="comment"># Data visualization</span></div><div class="line"><span class="keyword">library</span>(ggthemes) <span class="comment"># Data visualization</span></div><div class="line"><span class="keyword">library</span>(scales) <span class="comment"># Data visualization</span></div><div class="line"><span class="keyword">library</span>(plyr)</div><div class="line"><span class="keyword">library</span>(stringr) <span class="comment"># String manipulation</span></div><div class="line"><span class="keyword">library</span>(InformationValue) <span class="comment"># IV / WOE calculation</span></div><div class="line"><span class="keyword">library</span>(MLmetrics) <span class="comment"># Mache learning metrics.e.g. Recall, Precision, Accuracy, AUC</span></div><div class="line"><span class="keyword">library</span>(rpart) <span class="comment"># Decision tree utils</span></div><div class="line"><span class="keyword">library</span>(randomForest) <span class="comment"># Random Forest</span></div><div class="line"><span class="keyword">library</span>(dplyr) <span class="comment"># Data manipulation</span></div><div class="line"><span class="keyword">library</span>(e1071) <span class="comment"># SVM</span></div><div class="line"><span class="keyword">library</span>(Amelia) <span class="comment"># Missing value utils</span></div><div class="line"><span class="keyword">library</span>(party) <span class="comment"># Conditional inference trees</span></div><div class="line"><span class="keyword">library</span>(gbm) <span class="comment"># AdaBoost</span></div><div class="line"><span class="keyword">library</span>(class) <span class="comment"># KNN</span></div><div class="line"><span class="keyword">library</span>(scales)</div></pre></td></tr></table></figure>
+<p>通过如下代码将训练数据和测试数据分别加载到名为train和test的data.frame中</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">train &lt;- read_csv(<span class="string">"train.csv"</span>)</div><div class="line">test &lt;- read_csv(<span class="string">"test.csv"</span>)</div></pre></td></tr></table></figure>
+<p>由于之后需要对训练数据和测试数据做相同的转换，为避免重复操作和出现不一至的情况，更为了避免可能碰到的Categorical类型新level的问题，这里建议将训练数据和测试数据合并，统一操作。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">data &lt;- bind_rows(train, test)</div><div class="line">train.row &lt;- <span class="number">1</span>:nrow(train)</div><div class="line">test.row &lt;- (<span class="number">1</span> + nrow(train)):(nrow(train) + nrow(test))</div></pre></td></tr></table></figure>
+<h2 id="数据预览"><a href="#数据预览" class="headerlink" title="数据预览"></a>数据预览</h2><p>先观察数据</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">str(data)</div></pre></td></tr></table></figure>
+<pre><code>## Classes &apos;tbl_df&apos;, &apos;tbl&apos; and &apos;data.frame&apos;:    1309 obs. of  12 variables:
+##  $ PassengerId: int  1 2 3 4 5 6 7 8 9 10 ...
+##  $ Survived   : int  0 1 1 1 0 0 0 0 1 1 ...
+##  $ Pclass     : int  3 1 3 1 3 3 1 3 3 2 ...
+##  $ Name       : chr  &quot;Braund, Mr. Owen Harris&quot; &quot;Cumings, Mrs. John Bradley (Florence Briggs Thayer)&quot; &quot;Heikkinen, Miss. Laina&quot; &quot;Futrelle, Mrs. Jacques Heath (Lily May Peel)&quot; ...
+##  $ Sex        : chr  &quot;male&quot; &quot;female&quot; &quot;female&quot; &quot;female&quot; ...
+##  $ Age        : num  22 38 26 35 35 NA 54 2 27 14 ...
+##  $ SibSp      : int  1 1 0 1 0 0 0 3 0 1 ...
+##  $ Parch      : int  0 0 0 0 0 0 0 1 2 0 ...
+##  $ Ticket     : chr  &quot;A/5 21171&quot; &quot;PC 17599&quot; &quot;STON/O2. 3101282&quot; &quot;113803&quot; ...
+##  $ Fare       : num  7.25 71.28 7.92 53.1 8.05 ...
+##  $ Cabin      : chr  NA &quot;C85&quot; NA &quot;C123&quot; ...
+##  $ Embarked   : chr  &quot;S&quot; &quot;C&quot; &quot;S&quot; &quot;S&quot; ...
+</code></pre><p>从上可见，数据集包含12个变量，1309条数据，其中891条为训练数据，418条为测试数据</p>
+<ul>
+<li>PassengerId 整型变量，标识乘客的ID，递增变量，对预测无帮助</li>
+<li>Survived 整型变量，标识该乘客是否幸存。0表示遇难，1表示幸存。将其转换为factor变量比较方便处理</li>
+<li>Pclass 整型变量，标识乘客的社会-经济状态，1代表Upper，2代表Middle，3代表Lower</li>
+<li>Name 字符型变量，除包含姓和名以外，还包含Mr. Mrs. Dr.这样的具有西方文化特点的信息</li>
+<li>Sex 字符型变量，标识乘客性别，适合转换为factor类型变量</li>
+<li>Age 整型变量，标识乘客年龄，有缺失值</li>
+<li>SibSp 整型变量，代表兄弟姐妹及配偶的个数。其中Sib代表Sibling也即兄弟姐妹，Sp代表Spouse也即配偶</li>
+<li>Parch 整型变量，代表父母或子女的个数。其中Par代表Parent也即父母，Ch代表Child也即子女</li>
+<li>Ticket 字符型变量，代表乘客的船票号</li>
+<li>Fare 数值型，代表乘客的船票价</li>
+<li>Cabin 字符型，代表乘客所在的舱位，有缺失值</li>
+<li>Embarked 字符型，代表乘客登船口岸，适合转换为factor型变量</li>
+</ul>
+<h2 id="探索式数据分析"><a href="#探索式数据分析" class="headerlink" title="探索式数据分析"></a>探索式数据分析</h2><h3 id="乘客社会等级越高，幸存率越高"><a href="#乘客社会等级越高，幸存率越高" class="headerlink" title="乘客社会等级越高，幸存率越高"></a>乘客社会等级越高，幸存率越高</h3><p>对于第一个变量Pclass，先将其转换为factor类型变量。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">data$Survived &lt;- factor(data$Survived)</div></pre></td></tr></table></figure>
+<p>可通过如下方式统计出每个Pclass幸存和遇难人数，如下</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = Pclass, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">"count"</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  xlab(<span class="string">'Pclass'</span>) + </div><div class="line">  ylab(<span class="string">'Count'</span>) + </div><div class="line">  ggtitle(<span class="string">'How Pclass impact survivor'</span>) + </div><div class="line">  scale_fill_manual(values=c(<span class="string">"#FF0000"</span>, <span class="string">"#00FF00"</span>)) +</div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Pclass-1.png" alt=""></p>
+<p>从上图可见，Pclass=1的乘客大部分幸存，Pclass=2的乘客接近一半幸存，而Pclass=3的乘客只有不到25%幸存。</p>
+<p>为了更为定量的计算Pclass的预测价值，可以算出Pclass的WOE和IV如下。从结果可以看出，Pclass的IV为0.5，且“Highly Predictive”。由此可以暂时将Pclass作为预测模型的特征变量之一。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=factor(data$Pclass[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##   CAT GOODS BADS TOTAL     PCT_G     PCT_B        WOE         IV
+## 1   1   136   80   216 0.3976608 0.1457195  1.0039160 0.25292792
+## 2   2    87   97   184 0.2543860 0.1766849  0.3644848 0.02832087
+## 3   3   119  372   491 0.3479532 0.6775956 -0.6664827 0.21970095
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=factor(data$Pclass[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.5009497
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="不同Title的乘客幸存率不同"><a href="#不同Title的乘客幸存率不同" class="headerlink" title="不同Title的乘客幸存率不同"></a>不同Title的乘客幸存率不同</h3><p>乘客姓名重复度太低，不适合直接使用。而姓名中包含Mr. Mrs. Dr.等具有文化特征的信息，可将之抽取出来。</p>
+<p>本文使用如下方式从姓名中抽取乘客的Title</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">data$Title &lt;- sapply(data$Name, FUN=<span class="keyword">function</span>(x) &#123;strsplit(x, split=<span class="string">'[,.]'</span>)[[<span class="number">1</span>]][<span class="number">2</span>]&#125;)</div><div class="line">data$Title &lt;- sub(<span class="string">' '</span>, <span class="string">''</span>, data$Title)</div><div class="line">data$Title[data$Title %<span class="keyword">in</span>% c(<span class="string">'Mme'</span>, <span class="string">'Mlle'</span>)] &lt;- <span class="string">'Mlle'</span></div><div class="line">data$Title[data$Title %<span class="keyword">in</span>% c(<span class="string">'Capt'</span>, <span class="string">'Don'</span>, <span class="string">'Major'</span>, <span class="string">'Sir'</span>)] &lt;- <span class="string">'Sir'</span></div><div class="line">data$Title[data$Title %<span class="keyword">in</span>% c(<span class="string">'Dona'</span>, <span class="string">'Lady'</span>, <span class="string">'the Countess'</span>, <span class="string">'Jonkheer'</span>)] &lt;- <span class="string">'Lady'</span></div><div class="line">data$Title &lt;- factor(data$Title)</div></pre></td></tr></table></figure>
+<p>抽取完乘客的Title后，统计出不同Title的乘客的幸存与遇难人数</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = Title, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">"count"</span>, position=<span class="string">'stack'</span>) + </div><div class="line">  xlab(<span class="string">'Title'</span>) + </div><div class="line">  ylab(<span class="string">'Count'</span>) + </div><div class="line">  ggtitle(<span class="string">'How Title impact survivor'</span>) + </div><div class="line">  scale_fill_discrete(name=<span class="string">"Survived"</span>, breaks=c(<span class="number">0</span>, <span class="number">1</span>), labels=c(<span class="string">"Perish"</span>, <span class="string">"Survived"</span>)) + </div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_stack(vjust = <span class="number">0.5</span>)) +</div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Title-1.png" alt=""></p>
+<p>从上图可看出，Title为Mr的乘客幸存比例非常小，而Title为Mrs和Miss的乘客幸存比例非常大。这里使用WOE和IV来定量计算Title这一变量对于最终的预测是否有用。从计算结果可见，IV为1.520702，且”Highly Predictive”。因此，可暂将Title作为预测模型中的一个特征变量。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=data$Title[<span class="number">1</span>:nrow(train)], Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##       CAT GOODS BADS TOTAL       PCT_G       PCT_B         WOE            IV
+## 1     Col     1    1     2 0.002873563 0.001808318  0.46315552  4.933741e-04
+## 2      Dr     3    4     7 0.008620690 0.007233273  0.17547345  2.434548e-04
+## 3    Lady     2    1     3 0.005747126 0.001808318  1.15630270  4.554455e-03
+## 4  Master    23   17    40 0.066091954 0.030741410  0.76543639  2.705859e-02
+## 5    Miss   127   55   182 0.364942529 0.099457505  1.30000942  3.451330e-01
+## 6    Mlle     3    3     3 0.008620690 0.005424955  0.46315552  1.480122e-03
+## 7      Mr    81  436   517 0.232758621 0.788426763 -1.22003757  6.779360e-01
+## 8     Mrs    99   26   125 0.284482759 0.047016275  1.80017883  4.274821e-01
+## 9      Ms     1    1     1 0.002873563 0.001808318  0.46315552  4.933741e-04
+## 10    Rev     6    6     6 0.017241379 0.010849910  0.46315552  2.960244e-03
+## 11    Sir     2    3     5 0.005747126 0.005424955  0.05769041  1.858622e-05
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=data$Title[<span class="number">1</span>:nrow(train)], Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 1.487853
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="女性幸存率远高于男性"><a href="#女性幸存率远高于男性" class="headerlink" title="女性幸存率远高于男性"></a>女性幸存率远高于男性</h3><p>对于Sex变量，由Titanic号沉没的背景可知，逃生时遵循“妇女与小孩先走”的规则，由此猜想，Sex变量应该对预测乘客幸存有帮助。</p>
+<p>如下数据验证了这一猜想，大部分女性（233/(233+81)=74.20%）得以幸存，而男性中只有很小部分（109/(109+468)=22.85%）幸存。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">data$Sex &lt;- as.factor(data$Sex)</div><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = Sex, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  xlab(<span class="string">'Sex'</span>) + </div><div class="line">  ylab(<span class="string">'Count'</span>) + </div><div class="line">  ggtitle(<span class="string">'How Sex impact survivo'</span>) + </div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Sex-1.png" alt=""></p>
+<p>通过计算WOE和IV可知，Sex的IV为1.34且”Highly Predictive”，可暂将Sex作为特征变量。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=data$Sex[<span class="number">1</span>:nrow(train)], Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##      CAT GOODS BADS TOTAL     PCT_G    PCT_B        WOE        IV
+## 1 female   233   81   314 0.6812865 0.147541  1.5298770 0.8165651
+## 2   male   109  468   577 0.3187135 0.852459 -0.9838327 0.5251163
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=data$Sex[<span class="number">1</span>:nrow(train)], Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 1.341681
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="未成年人幸存率高于成年人"><a href="#未成年人幸存率高于成年人" class="headerlink" title="未成年人幸存率高于成年人"></a>未成年人幸存率高于成年人</h3><p>结合背景，按照“妇女与小孩先走”的规则，未成年人应该有更大可能幸存。如下图所示，Age &lt; 18的乘客中，幸存人数确实高于遇难人数。同时青壮年乘客中，遇难人数远高于幸存人数。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">ggplot(data = data[(!is.na(data$Age)) &amp; row(data[, <span class="string">'Age'</span>]) &lt;= <span class="number">891</span>, ], aes(x = Age, color=Survived)) + </div><div class="line">  geom_line(aes(label=..count..), stat = <span class="string">'bin'</span>, binwidth=<span class="number">5</span>)  + </div><div class="line">  labs(title = <span class="string">"How Age impact survivor"</span>, x = <span class="string">"Age"</span>, y = <span class="string">"Count"</span>, fill = <span class="string">"Survived"</span>)</div></pre></td></tr></table></figure>
+<pre><code>## Warning: Ignoring unknown aesthetics: label
+</code></pre><p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Age-1.png" alt=""></p>
+<h3 id="配偶及兄弟姐妹数适中的乘客更易幸存"><a href="#配偶及兄弟姐妹数适中的乘客更易幸存" class="headerlink" title="配偶及兄弟姐妹数适中的乘客更易幸存"></a>配偶及兄弟姐妹数适中的乘客更易幸存</h3><p>对于SibSp变量，分别统计出幸存与遇难人数。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = SibSp, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  labs(title = <span class="string">"How SibSp impact survivor"</span>, x = <span class="string">"Sibsp"</span>, y = <span class="string">"Count"</span>, fill = <span class="string">"Survived"</span>) + </div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20SibSp-1.png" alt=""></p>
+<p>从上图可见，SibSp为0的乘客，幸存率低于1/3；SibSp为1或2的乘客，幸存率高于50%；SibSp大于等于3的乘客，幸存率非常低。可通过计算WOE与IV定量计算SibSp对预测的贡献。IV为0.1448994，且”Highly Predictive”。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=as.factor(data$SibSp[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##   CAT GOODS BADS TOTAL       PCT_G       PCT_B        WOE          IV
+## 1   0   210  398   608 0.593220339 0.724954463 -0.2005429 0.026418349
+## 2   1   112   97   209 0.316384181 0.176684882  0.5825894 0.081387334
+## 3   2    13   15    28 0.036723164 0.027322404  0.2957007 0.002779811
+## 4   3     4   12    16 0.011299435 0.021857923 -0.6598108 0.006966604
+## 5   4     3   15    18 0.008474576 0.027322404 -1.1706364 0.022063953
+## 6   5     5    5     5 0.014124294 0.009107468  0.4388015 0.002201391
+## 7   8     7    7     7 0.019774011 0.012750455  0.4388015 0.003081947
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=as.factor(data$SibSp[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.1448994
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="父母与子女数为1到3的乘客更可能幸存"><a href="#父母与子女数为1到3的乘客更可能幸存" class="headerlink" title="父母与子女数为1到3的乘客更可能幸存"></a>父母与子女数为1到3的乘客更可能幸存</h3><p>对于Parch变量，分别统计出幸存与遇难人数。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = Parch, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  labs(title = <span class="string">"How Parch impact survivor"</span>, x = <span class="string">"Parch"</span>, y = <span class="string">"Count"</span>, fill = <span class="string">"Survived"</span>) + </div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Parch-1.png" alt=""></p>
+<p>从上图可见，Parch为0的乘客，幸存率低于1/3；Parch为1到3的乘客，幸存率高于50%；Parch大于等于4的乘客，幸存率非常低。可通过计算WOE与IV定量计算Parch对预测的贡献。IV为0.1166611，且”Highly Predictive”。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=as.factor(data$Parch[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##   CAT GOODS BADS TOTAL       PCT_G       PCT_B        WOE          IV
+## 1   0   233  445   678 0.671469741 0.810564663 -0.1882622 0.026186312
+## 2   1    65   53   118 0.187319885 0.096539162  0.6628690 0.060175728
+## 3   2    40   40    80 0.115273775 0.072859745  0.4587737 0.019458440
+## 4   3     3    2     5 0.008645533 0.003642987  0.8642388 0.004323394
+## 5   4     4    4     4 0.011527378 0.007285974  0.4587737 0.001945844
+## 6   5     1    4     5 0.002881844 0.007285974 -0.9275207 0.004084922
+## 7   6     1    1     1 0.002881844 0.001821494  0.4587737 0.000486461
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=as.factor(data$Parch[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.1166611
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="FamilySize为2到4的乘客幸存可能性较高"><a href="#FamilySize为2到4的乘客幸存可能性较高" class="headerlink" title="FamilySize为2到4的乘客幸存可能性较高"></a>FamilySize为2到4的乘客幸存可能性较高</h3><p>SibSp与Parch都说明，当乘客无亲人时，幸存率较低，乘客有少数亲人时，幸存率高于50%，而当亲人数过高时，幸存率反而降低。在这里，可以考虑将SibSp与Parch相加，生成新的变量，FamilySize。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">data$FamilySize &lt;- data$SibSp + data$Parch + <span class="number">1</span></div><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = FamilySize, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  xlab(<span class="string">'FamilySize'</span>) + </div><div class="line">  ylab(<span class="string">'Count'</span>) + </div><div class="line">  ggtitle(<span class="string">'How FamilySize impact survivor'</span>) + </div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20FamilySize-1.png" alt=""></p>
+<p>计算FamilySize的WOE和IV可知，IV为0.3497672，且“Highly Predictive”。由SibSp与Parch派生出来的新变量FamilySize的IV高于SibSp与Parch的IV，因此，可将这个派生变量FamilySize作为特征变量。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=as.factor(data$FamilySize[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##   CAT GOODS BADS TOTAL       PCT_G      PCT_B        WOE           IV
+## 1   1   163  374   537 0.459154930 0.68123862 -0.3945249 0.0876175539
+## 2   2    89   72   161 0.250704225 0.13114754  0.6479509 0.0774668616
+## 3   3    59   43   102 0.166197183 0.07832423  0.7523180 0.0661084057
+## 4   4    21    8    29 0.059154930 0.01457195  1.4010615 0.0624634998
+## 5   5     3   12    15 0.008450704 0.02185792 -0.9503137 0.0127410643
+## 6   6     3   19    22 0.008450704 0.03460838 -1.4098460 0.0368782940
+## 7   7     4    8    12 0.011267606 0.01457195 -0.2571665 0.0008497665
+## 8   8     6    6     6 0.016901408 0.01092896  0.4359807 0.0026038712
+## 9  11     7    7     7 0.019718310 0.01275046  0.4359807 0.0030378497
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=as.factor(data$FamilySize[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.3497672
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="共票号乘客幸存率高"><a href="#共票号乘客幸存率高" class="headerlink" title="共票号乘客幸存率高"></a>共票号乘客幸存率高</h3><p>对于Ticket变量，重复度非常低，无法直接利用。先统计出每张票对应的乘客数。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">ticket.count &lt;- aggregate(data$Ticket, by = list(data$Ticket), <span class="keyword">function</span>(x) sum(!is.na(x)))</div></pre></td></tr></table></figure>
+<p>这里有个猜想，票号相同的乘客，是一家人，很可能同时幸存或者同时遇难。现将所有乘客按照Ticket分为两组，一组是使用单独票号，另一组是与他人共享票号，并统计出各组的幸存与遇难人数。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">data$TicketCount &lt;- apply(data, <span class="number">1</span>, <span class="keyword">function</span>(x) ticket.count[which(ticket.count[, <span class="number">1</span>] == x[<span class="string">'Ticket'</span>]), <span class="number">2</span>])</div><div class="line">data$TicketCount &lt;- factor(sapply(data$TicketCount, <span class="keyword">function</span>(x) ifelse(x &gt; <span class="number">1</span>, <span class="string">'Share'</span>, <span class="string">'Unique'</span>)))</div><div class="line">ggplot(data = data[<span class="number">1</span>:nrow(train),], mapping = aes(x = TicketCount, y = ..count.., fill=Survived)) + </div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  xlab(<span class="string">'TicketCount'</span>) + </div><div class="line">  ylab(<span class="string">'Count'</span>) + </div><div class="line">  ggtitle(<span class="string">'How TicketCount impact survivor'</span>) + </div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20TicketCount-1.png" alt=""></p>
+<p>由上图可见，未与他人同票号的乘客，只有130/(130+351)=27%幸存，而与他人同票号的乘客有212/(212+198)=51.7%幸存。计算TicketCount的WOE与IV如下。其IV为0.2751882，且”Highly Predictive”</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=data$TicketCount[<span class="number">1</span>:nrow(train)], Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##      CAT GOODS BADS TOTAL    PCT_G     PCT_B        WOE        IV
+## 1  Share   212  198   410 0.619883 0.3606557  0.5416069 0.1403993
+## 2 Unique   130  351   481 0.380117 0.6393443 -0.5199641 0.1347889
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=data$TicketCount[<span class="number">1</span>:nrow(train)], Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.2751882
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="支出船票费越高幸存率越高"><a href="#支出船票费越高幸存率越高" class="headerlink" title="支出船票费越高幸存率越高"></a>支出船票费越高幸存率越高</h3><p>对于Fare变量，由下图可知，Fare越大，幸存率越高。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">ggplot(data = data[(!is.na(data$Fare)) &amp; row(data[, <span class="string">'Fare'</span>]) &lt;= <span class="number">891</span>, ], aes(x = Fare, color=Survived)) + </div><div class="line">  geom_line(aes(label=..count..), stat = <span class="string">'bin'</span>, binwidth=<span class="number">10</span>)  + </div><div class="line">  labs(title = <span class="string">"How Fare impact survivor"</span>, x = <span class="string">"Fare"</span>, y = <span class="string">"Count"</span>, fill = <span class="string">"Survived"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Fare-1.png" alt=""></p>
+<h3 id="不同仓位的乘客幸存率不同"><a href="#不同仓位的乘客幸存率不同" class="headerlink" title="不同仓位的乘客幸存率不同"></a>不同仓位的乘客幸存率不同</h3><p>对于Cabin变量，其值以字母开始，后面伴以数字。这里有一个猜想，字母代表某个区域，数据代表该区域的序号。类似于火车票即有车箱号又有座位号。因此，这里可尝试将Cabin的首字母提取出来，并分别统计出不同首字母仓位对应的乘客的幸存率。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">ggplot(data[<span class="number">1</span>:nrow(train), ], mapping = aes(x = as.factor(sapply(data$Cabin[<span class="number">1</span>:nrow(train)], <span class="keyword">function</span>(x) str_sub(x, start = <span class="number">1</span>, end = <span class="number">1</span>))), y = ..count.., fill = Survived)) +</div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  xlab(<span class="string">'Cabin'</span>) +</div><div class="line">  ylab(<span class="string">'Count'</span>) +</div><div class="line">  ggtitle(<span class="string">'How Cabin impact survivor'</span>) +</div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Cabin-1.png" alt=""></p>
+<p>由上图可见，仓位号首字母为B，C，D，E，F的乘客幸存率均高于50%，而其它仓位的乘客幸存率均远低于50%。仓位变量的WOE及IV计算如下。由此可见，Cabin的IV为0.1866526，且“Highly Predictive”</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">data$Cabin &lt;- sapply(data$Cabin, <span class="keyword">function</span>(x) str_sub(x, start = <span class="number">1</span>, end = <span class="number">1</span>))</div><div class="line">WOETable(X=as.factor(data$Cabin[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##   CAT GOODS BADS TOTAL      PCT_G      PCT_B        WOE          IV
+## 1   A     7    8    15 0.05109489 0.11764706 -0.8340046 0.055504815
+## 2   B    35   12    47 0.25547445 0.17647059  0.3699682 0.029228917
+## 3   C    35   24    59 0.25547445 0.35294118 -0.3231790 0.031499197
+## 4   D    25    8    33 0.18248175 0.11764706  0.4389611 0.028459906
+## 5   E    24    8    32 0.17518248 0.11764706  0.3981391 0.022907100
+## 6   F     8    5    13 0.05839416 0.07352941 -0.2304696 0.003488215
+## 7   G     2    2     4 0.01459854 0.02941176 -0.7004732 0.010376267
+## 8   T     1    1     1 0.00729927 0.01470588 -0.7004732 0.005188134
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=as.factor(data$Cabin[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.1866526
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><h3 id="Embarked为S的乘客幸存率较低"><a href="#Embarked为S的乘客幸存率较低" class="headerlink" title="Embarked为S的乘客幸存率较低"></a>Embarked为S的乘客幸存率较低</h3><p>Embarked变量代表登船码头，现通过统计不同码头登船的乘客幸存率来判断Embarked是否可用于预测乘客幸存情况。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">ggplot(data[<span class="number">1</span>:nrow(train), ], mapping = aes(x = Embarked, y = ..count.., fill = Survived)) +</div><div class="line">  geom_bar(stat = <span class="string">'count'</span>, position=<span class="string">'dodge'</span>) + </div><div class="line">  xlab(<span class="string">'Embarked'</span>) +</div><div class="line">  ylab(<span class="string">'Count'</span>) +</div><div class="line">  ggtitle(<span class="string">'How Embarked impact survivor'</span>) +</div><div class="line">  geom_text(stat = <span class="string">"count"</span>, aes(label = ..count..), position=position_dodge(width=<span class="number">1</span>), , vjust=-<span class="number">0.5</span>) + </div><div class="line">  theme(plot.title = element_text(hjust = <span class="number">0.5</span>), legend.position=<span class="string">"bottom"</span>)</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Survived%20vs.%20Embarked-1.png" alt=""></p>
+<p>从上图可见，Embarked为S的乘客幸存率仅为217/(217+427)=33.7%，而Embarked为C或为NA的乘客幸存率均高于50%。初步判断Embarked可用于预测乘客是否幸存。Embarked的WOE和IV计算如下。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">WOETable(X=as.factor(data$Embarked[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>##   CAT GOODS BADS TOTAL      PCT_G     PCT_B        WOE           IV
+## 1   C    93   75   168 0.27352941 0.1366120  0.6942642 9.505684e-02
+## 2   Q    30   47    77 0.08823529 0.0856102  0.0302026 7.928467e-05
+## 3   S   217  427   644 0.63823529 0.7777778 -0.1977338 2.759227e-02
+</code></pre><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">IV(X=as.factor(data$Embarked[<span class="number">1</span>:nrow(train)]), Y=data$Survived[<span class="number">1</span>:nrow(train)])</div></pre></td></tr></table></figure>
+<pre><code>## [1] 0.1227284
+## attr(,&quot;howgood&quot;)
+## [1] &quot;Highly Predictive&quot;
+</code></pre><p>从上述计算结果可见，IV为0.1227284，且“Highly Predictive”。</p>
+<h2 id="填补缺失值"><a href="#填补缺失值" class="headerlink" title="填补缺失值"></a>填补缺失值</h2><h3 id="列出所有缺失数据"><a href="#列出所有缺失数据" class="headerlink" title="列出所有缺失数据"></a>列出所有缺失数据</h3><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">attach</span>(data)</div><div class="line">  missing &lt;- list(Pclass=nrow(data[is.na(Pclass), ]))</div><div class="line">  missing$Name &lt;- nrow(data[is.na(Name), ])</div><div class="line">  missing$Sex &lt;- nrow(data[is.na(Sex), ])</div><div class="line">  missing$Age &lt;- nrow(data[is.na(Age), ])</div><div class="line">  missing$SibSp &lt;- nrow(data[is.na(SibSp), ])</div><div class="line">  missing$Parch &lt;- nrow(data[is.na(Parch), ])</div><div class="line">  missing$Ticket &lt;- nrow(data[is.na(Ticket), ])</div><div class="line">  missing$Fare &lt;- nrow(data[is.na(Fare), ])</div><div class="line">  missing$Cabin &lt;- nrow(data[is.na(Cabin), ])</div><div class="line">  missing$Embarked &lt;- nrow(data[is.na(Embarked), ])</div><div class="line">  <span class="keyword">for</span> (name <span class="keyword">in</span> names(missing)) &#123;</div><div class="line">    <span class="keyword">if</span> (missing[[name]][<span class="number">1</span>] &gt; <span class="number">0</span>) &#123;</div><div class="line">      print(paste(<span class="string">''</span>, name, <span class="string">' miss '</span>, missing[[name]][<span class="number">1</span>], <span class="string">' values'</span>, sep = <span class="string">''</span>))</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"><span class="keyword">detach</span>(data)</div></pre></td></tr></table></figure>
+<pre><code>## [1] &quot;Age miss 263 values&quot;
+## [1] &quot;Fare miss 1 values&quot;
+## [1] &quot;Cabin miss 1014 values&quot;
+## [1] &quot;Embarked miss 2 values&quot;
+</code></pre><h3 id="预测乘客年龄"><a href="#预测乘客年龄" class="headerlink" title="预测乘客年龄"></a>预测乘客年龄</h3><p>缺失年龄信息的乘客数为263，缺失量比较大，不适合使用中位数或者平均值填补。一般通过使用其它变量预测或者直接将缺失值设置为默认值的方法填补，这里通过其它变量来预测缺失的年龄信息。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">age.model &lt;- rpart(Age ~ Pclass + Sex + SibSp + Parch + Fare + Embarked + Title + FamilySize, data=data[!is.na(data$Age), ], method=<span class="string">'anova'</span>)</div><div class="line">data$Age[is.na(data$Age)] &lt;- predict(age.model, data[is.na(data$Age), ])</div></pre></td></tr></table></figure>
+<h3 id="中位数填补缺失的Embarked值"><a href="#中位数填补缺失的Embarked值" class="headerlink" title="中位数填补缺失的Embarked值"></a>中位数填补缺失的Embarked值</h3><p>从如下数据可见，缺失Embarked信息的乘客的Pclass均为1，且Fare均为80。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">data[is.na(data$Embarked), c(<span class="string">'PassengerId'</span>, <span class="string">'Pclass'</span>, <span class="string">'Fare'</span>, <span class="string">'Embarked'</span>)]</div></pre></td></tr></table></figure>
+<pre><code>## # A tibble: 2 × 4
+##   PassengerId Pclass  Fare Embarked
+##         &lt;int&gt;  &lt;int&gt; &lt;dbl&gt;    &lt;chr&gt;
+## 1          62      1    80     &lt;NA&gt;
+## 2         830      1    80     &lt;NA&gt;
+</code></pre><p>由下图所见，Embarked为C且Pclass为1的乘客的Fare中位数为80。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">ggplot(data[!is.na(data$Embarked),], aes(x=Embarked, y=Fare, fill=factor(Pclass))) +</div><div class="line">  geom_boxplot() +</div><div class="line">  geom_hline(aes(yintercept=<span class="number">80</span>), color=<span class="string">'red'</span>, linetype=<span class="string">'dashed'</span>, lwd=<span class="number">2</span>) +</div><div class="line">  scale_y_continuous(labels=dollar_format()) + theme_few()</div></pre></td></tr></table></figure>
+<p><img src="http://www.jasongj.com/img/ml/classification/Fare%20median%20value%20of%20each%20Embarked%20and%20Pclass-1.png" alt="Fare median value of each Embarked and Pclass"></p>
+<p>因此可以将缺失的Embarked值设置为’C’。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">data$Embarked[is.na(data$Embarked)] &lt;- <span class="string">'C'</span></div><div class="line">data$Embarked &lt;- as.factor(data$Embarked)</div></pre></td></tr></table></figure>
+<h3 id="中位数填补一个缺失的Fare值"><a href="#中位数填补一个缺失的Fare值" class="headerlink" title="中位数填补一个缺失的Fare值"></a>中位数填补一个缺失的Fare值</h3><p>由于缺失Fare值的记录非常少，一般可直接使用平均值或者中位数填补该缺失值。这里使用乘客的Fare中位数填补缺失值。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">data$Fare[is.na(data$Fare)] &lt;- median(data$Fare, na.rm=<span class="literal">TRUE</span>)</div></pre></td></tr></table></figure>
+<h3 id="将缺失的Cabin设置为默认值"><a href="#将缺失的Cabin设置为默认值" class="headerlink" title="将缺失的Cabin设置为默认值"></a>将缺失的Cabin设置为默认值</h3><p>缺失Cabin信息的记录数较多，不适合使用中位数或者平均值填补，一般通过使用其它变量预测或者直接将缺失值设置为默认值的方法填补。由于Cabin信息不太容易从其它变量预测，并且在上一节中，将NA单独对待时，其IV已经比较高。因此这里直接将缺失的Cabin设置为一个默认值。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">data$Cabin &lt;- as.factor(sapply(data$Cabin, <span class="keyword">function</span>(x) ifelse(is.na(x), <span class="string">'X'</span>, str_sub(x, start = <span class="number">1</span>, end = <span class="number">1</span>))))</div></pre></td></tr></table></figure>
+<h2 id="训练模型"><a href="#训练模型" class="headerlink" title="训练模型"></a>训练模型</h2><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">set.seed(<span class="number">415</span>)</div><div class="line">model &lt;- cforest(Survived ~ Pclass + Title + Sex + Age + SibSp + Parch + FamilySize + TicketCount + Fare + Cabin + Embarked, data = data[train.row, ], controls=cforest_unbiased(ntree=<span class="number">2000</span>, mtry=<span class="number">3</span>))</div></pre></td></tr></table></figure>
+<h2 id="交叉验证"><a href="#交叉验证" class="headerlink" title="交叉验证"></a>交叉验证</h2><p>一般情况下，应该将训练数据分为两部分，一部分用于训练，另一部分用于验证。或者使用k-fold交叉验证。本文将所有训练数据都用于训练，然后随机选取30%数据集用于验证。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">cv.summarize &lt;- <span class="keyword">function</span>(data.true, data.predict) &#123;</div><div class="line">  print(paste(<span class="string">'Recall:'</span>, Recall(data.true, data.predict)))</div><div class="line">  print(paste(<span class="string">'Precision:'</span>, Precision(data.true, data.predict)))</div><div class="line">  print(paste(<span class="string">'Accuracy:'</span>, Accuracy(data.predict, data.true)))</div><div class="line">  print(paste(<span class="string">'AUC:'</span>, AUC(data.predict, data.true)))</div><div class="line">&#125;</div><div class="line">set.seed(<span class="number">415</span>)</div><div class="line">cv.test.sample &lt;- sample(<span class="number">1</span>:nrow(train), as.integer(<span class="number">0.3</span> * nrow(train)), replace = <span class="literal">TRUE</span>)</div><div class="line">cv.test &lt;- data[cv.test.sample,]</div><div class="line">cv.prediction &lt;- predict(model, cv.test, OOB=<span class="literal">TRUE</span>, type = <span class="string">"response"</span>)</div><div class="line">cv.summarize(cv.test$Survived, cv.prediction)</div></pre></td></tr></table></figure>
+<pre><code>## [1] &quot;Recall: 0.947976878612717&quot;
+## [1] &quot;Precision: 0.841025641025641&quot;
+## [1] &quot;Accuracy: 0.850187265917603&quot;
+## [1] &quot;AUC: 0.809094822285082&quot;
+</code></pre><h2 id="预测"><a href="#预测" class="headerlink" title="预测"></a>预测</h2><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">predict.result &lt;- predict(model, data[(<span class="number">1</span>+nrow(train)):(nrow(data)), ], OOB=<span class="literal">TRUE</span>, type = <span class="string">"response"</span>)</div><div class="line">output &lt;- data.frame(PassengerId = test$PassengerId, Survived = predict.result)</div><div class="line">write.csv(output, file = <span class="string">"cit1.csv"</span>, row.names = <span class="literal">FALSE</span>)</div></pre></td></tr></table></figure>
+<p>该模型预测结果在Kaggle的得分为0.80383，排第992名，前992/6292=15.8%。</p>
+<h2 id="调优"><a href="#调优" class="headerlink" title="调优"></a>调优</h2><h3 id="去掉关联特征"><a href="#去掉关联特征" class="headerlink" title="去掉关联特征"></a>去掉关联特征</h3><p>由于FamilySize结合了SibSp与Parch的信息，因此可以尝试将SibSp与Parch从特征变量中移除。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">set.seed(<span class="number">415</span>)</div><div class="line">model &lt;- cforest(Survived ~ Pclass + Title + Sex + Age + FamilySize + TicketCount + Fare + Cabin + Embarked, data = data[train.row, ], controls=cforest_unbiased(ntree=<span class="number">2000</span>, mtry=<span class="number">3</span>))</div><div class="line">predict.result &lt;- predict(model, data[test.row, ], OOB=<span class="literal">TRUE</span>, type = <span class="string">"response"</span>)</div><div class="line">submit &lt;- data.frame(PassengerId = test$PassengerId, Survived = predict.result)</div><div class="line">write.csv(submit, file = <span class="string">"cit2.csv"</span>, row.names = <span class="literal">FALSE</span>)</div></pre></td></tr></table></figure>
+<p>该模型预测结果在Kaggle的得分仍为0.80383。</p>
+<h3 id="去掉IV较低的Cabin"><a href="#去掉IV较低的Cabin" class="headerlink" title="去掉IV较低的Cabin"></a>去掉IV较低的Cabin</h3><p>由于Cabin的IV值相对较低，因此可以考虑将其从模型中移除。</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">set.seed(<span class="number">415</span>)</div><div class="line">model &lt;- cforest(Survived ~ Pclass + Title + Sex + Age + FamilySize + TicketCount + Fare + Embarked, data = data[train.row, ], controls=cforest_unbiased(ntree=<span class="number">2000</span>, mtry=<span class="number">3</span>))</div><div class="line">predict.result &lt;- predict(model, data[test.row, ], OOB=<span class="literal">TRUE</span>, type = <span class="string">"response"</span>)</div><div class="line">submit &lt;- data.frame(PassengerId = test$PassengerId, Survived = predict.result)</div><div class="line">write.csv(submit, file = <span class="string">"cit3.csv"</span>, row.names = <span class="literal">FALSE</span>)</div></pre></td></tr></table></figure>
+<p>该模型预测结果在Kaggle的得分仍为0.80383。</p>
+<h3 id="增加派生特征"><a href="#增加派生特征" class="headerlink" title="增加派生特征"></a>增加派生特征</h3><p>对于Name变量，上文从中派生出了Title变量。由于以下原因，可推测乘客的姓氏可能具有一定的预测作用</p>
+<ul>
+<li>部分西方国家中人名的重复度较高，而姓氏重复度较低，姓氏具有一定辨识度</li>
+<li>部分国家的姓氏具有一定的身份识别作用</li>
+<li>姓氏相同的乘客，可能是一家人（这一点也基于西方国家姓氏重复度较低这一特点），而一家人同时幸存或遇难的可能性较高</li>
+</ul>
+<p>考虑到只出现一次的姓氏不可能同时出现在训练集和测试集中，不具辨识度和预测作用，因此将只出现一次的姓氏均命名为’Small’</p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">data$Surname &lt;- sapply(data$Name, FUN=<span class="keyword">function</span>(x) &#123;strsplit(x, split=<span class="string">'[,.]'</span>)[[<span class="number">1</span>]][<span class="number">1</span>]&#125;)</div><div class="line">data$FamilyID &lt;- paste(as.character(data$FamilySize), data$Surname, sep=<span class="string">""</span>)</div><div class="line">data$FamilyID[data$FamilySize &lt;= <span class="number">2</span>] &lt;- <span class="string">'Small'</span></div><div class="line"><span class="comment"># Delete erroneous family IDs</span></div><div class="line">famIDs &lt;- data.frame(table(data$FamilyID))</div><div class="line">famIDs &lt;- famIDs[famIDs$Freq &lt;= <span class="number">2</span>,]</div><div class="line">data$FamilyID[data$FamilyID %<span class="keyword">in</span>% famIDs$Var1] &lt;- <span class="string">'Small'</span></div><div class="line"><span class="comment"># Convert to a factor</span></div><div class="line">data$FamilyID &lt;- factor(data$FamilyID)</div></pre></td></tr></table></figure>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">set.seed(<span class="number">415</span>)</div><div class="line">model &lt;- cforest(as.factor(Survived) ~ Pclass + Sex + Age + Fare + Embarked + Title + FamilySize + FamilyID + TicketCount, data = data[train.row, ], controls=cforest_unbiased(ntree=<span class="number">2000</span>, mtry=<span class="number">3</span>))</div><div class="line">predict.result &lt;- predict(model, data[test.row, ], OOB=<span class="literal">TRUE</span>, type = <span class="string">"response"</span>)</div><div class="line">submit &lt;- data.frame(PassengerId = test$PassengerId, Survived = predict.result)</div><div class="line">write.csv(submit, file = <span class="string">"cit4.csv"</span>, row.names = <span class="literal">FALSE</span>)</div></pre></td></tr></table></figure>
+<p>该模型预测结果在Kaggle的得分为0.82297，排第207名，前207/6292=3.3%</p>
+<h3 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h3><p>经试验，将缺失的Embarked补充为出现最多的S而非C，成绩有所提升。但该方法理论依据不强，并且该成绩只是Public排行榜成绩，并非最终成绩，并不能说明该方法一定优于其它方法。因此本文并不推荐该方法，只是作为一种可能的思路，供大家参考学习。<br><figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">data$Embarked[c(<span class="number">62</span>,<span class="number">830</span>)] = <span class="string">"S"</span></div><div class="line">data$Embarked &lt;- factor(data$Embarked)</div></pre></td></tr></table></figure></p>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">set.seed(<span class="number">415</span>)</div><div class="line">model &lt;- cforest(as.factor(Survived) ~ Pclass + Sex + Age + Fare + Embarked + Title + FamilySize + FamilyID + TicketCount, data = data[train.row, ], controls=cforest_unbiased(ntree=<span class="number">2000</span>, mtry=<span class="number">3</span>))</div><div class="line">predict.result &lt;- predict(model, data[test.row, ], OOB=<span class="literal">TRUE</span>, type = <span class="string">"response"</span>)</div><div class="line">submit &lt;- data.frame(PassengerId = test$PassengerId, Survived = predict.result)</div><div class="line">write.csv(submit, file = <span class="string">"cit5.csv"</span>, row.names = <span class="literal">FALSE</span>)</div></pre></td></tr></table></figure>
+<p>该模型预测结果在Kaggle的得分仍为0.82775，排第114名，前114/6292=1.8%<br><img src="http://www.jasongj.com/img/ml/classification/kaggle_rank.png" alt="Kaggle rank first 2%"></p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文详述了如何通过数据预览，探索式数据分析，缺失数据填补，删除关联特征以及派生新特征等方法，在Kaggle的Titanic幸存预测这一分类问题竞赛中获得前2%排名的具体方法。  </p>
+<h1 id="下篇预告"><a href="#下篇预告" class="headerlink" title="下篇预告"></a>下篇预告</h1><p>下一篇文章将侧重讲解使用机器学习解决工程问题的一般思路和方法。</p>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'ml/classification/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/machine-learning/" rel="tag"># machine learning</a>
+          
+            <a href="/tags/机器学习/" rel="tag"># 机器学习</a>
+          
+            <a href="/tags/AI/" rel="tag"># AI</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/spark/skew/" rel="next" title="Spark性能优化之道——解决Spark数据倾斜（Data Skew）的N种姿势">
+                <i class="fa fa-chevron-left"></i> Spark性能优化之道——解决Spark数据倾斜（Data Skew）的N种姿势
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/kafka/high_throughput/" rel="prev" title="Kafka设计解析（六）- Kafka高性能架构之道">
+                Kafka设计解析（六）- Kafka高性能架构之道 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/ml/classification/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/ml/classification/'),
+                identifier: decodeURI('/ml/classification/'),
+                title: '机器学习（二） 如何做到Kaggle排名前2%',
+                slug: 'ml/classification/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#摘要"><span class="nav-number">1.</span> <span class="nav-text">摘要</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#竞赛内容介绍"><span class="nav-number">2.</span> <span class="nav-text">竞赛内容介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#如何取得排名前2-的成绩"><span class="nav-number">3.</span> <span class="nav-text">如何取得排名前2%的成绩</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#加载数据"><span class="nav-number">3.1.</span> <span class="nav-text">加载数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据预览"><span class="nav-number">3.2.</span> <span class="nav-text">数据预览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#探索式数据分析"><span class="nav-number">3.3.</span> <span class="nav-text">探索式数据分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#乘客社会等级越高，幸存率越高"><span class="nav-number">3.3.1.</span> <span class="nav-text">乘客社会等级越高，幸存率越高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#不同Title的乘客幸存率不同"><span class="nav-number">3.3.2.</span> <span class="nav-text">不同Title的乘客幸存率不同</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#女性幸存率远高于男性"><span class="nav-number">3.3.3.</span> <span class="nav-text">女性幸存率远高于男性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#未成年人幸存率高于成年人"><span class="nav-number">3.3.4.</span> <span class="nav-text">未成年人幸存率高于成年人</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配偶及兄弟姐妹数适中的乘客更易幸存"><span class="nav-number">3.3.5.</span> <span class="nav-text">配偶及兄弟姐妹数适中的乘客更易幸存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#父母与子女数为1到3的乘客更可能幸存"><span class="nav-number">3.3.6.</span> <span class="nav-text">父母与子女数为1到3的乘客更可能幸存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#FamilySize为2到4的乘客幸存可能性较高"><span class="nav-number">3.3.7.</span> <span class="nav-text">FamilySize为2到4的乘客幸存可能性较高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#共票号乘客幸存率高"><span class="nav-number">3.3.8.</span> <span class="nav-text">共票号乘客幸存率高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#支出船票费越高幸存率越高"><span class="nav-number">3.3.9.</span> <span class="nav-text">支出船票费越高幸存率越高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#不同仓位的乘客幸存率不同"><span class="nav-number">3.3.10.</span> <span class="nav-text">不同仓位的乘客幸存率不同</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Embarked为S的乘客幸存率较低"><span class="nav-number">3.3.11.</span> <span class="nav-text">Embarked为S的乘客幸存率较低</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#填补缺失值"><span class="nav-number">3.4.</span> <span class="nav-text">填补缺失值</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#列出所有缺失数据"><span class="nav-number">3.4.1.</span> <span class="nav-text">列出所有缺失数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#预测乘客年龄"><span class="nav-number">3.4.2.</span> <span class="nav-text">预测乘客年龄</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#中位数填补缺失的Embarked值"><span class="nav-number">3.4.3.</span> <span class="nav-text">中位数填补缺失的Embarked值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#中位数填补一个缺失的Fare值"><span class="nav-number">3.4.4.</span> <span class="nav-text">中位数填补一个缺失的Fare值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#将缺失的Cabin设置为默认值"><span class="nav-number">3.4.5.</span> <span class="nav-text">将缺失的Cabin设置为默认值</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#训练模型"><span class="nav-number">3.5.</span> <span class="nav-text">训练模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#交叉验证"><span class="nav-number">3.6.</span> <span class="nav-text">交叉验证</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#预测"><span class="nav-number">3.7.</span> <span class="nav-text">预测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#调优"><span class="nav-number">3.8.</span> <span class="nav-text">调优</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#去掉关联特征"><span class="nav-number">3.8.1.</span> <span class="nav-text">去掉关联特征</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#去掉IV较低的Cabin"><span class="nav-number">3.8.2.</span> <span class="nav-text">去掉IV较低的Cabin</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#增加派生特征"><span class="nav-number">3.8.3.</span> <span class="nav-text">增加派生特征</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其它"><span class="nav-number">3.8.4.</span> <span class="nav-text">其它</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#下篇预告"><span class="nav-number">5.</span> <span class="nav-text">下篇预告</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/ml/classification/';
+          this.page.identifier = 'ml/classification/';
+          this.page.title = 'ml/classification/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

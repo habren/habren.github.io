@@ -1,0 +1,1261 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="SQL,sql,SQL优化,sql优化,数据库,PostgreSQL,postgres,表分区,partition,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文介绍了数据库分区表的使用场景，优势，原理，及在PostgreSQL中的实现和注意事项。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL优化（三） PostgreSQL Table Partitioning">
+<meta property="og:url" content="http://www.jasongj.com/2015/12/13/SQL3_partition/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文介绍了数据库分区表的使用场景，优势，原理，及在PostgreSQL中的实现和注意事项。">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/SQL3/partition_arch.png">
+<meta property="og:updated_time" content="2017-03-15T13:17:39.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SQL优化（三） PostgreSQL Table Partitioning">
+<meta name="twitter:description" content="本文介绍了数据库分区表的使用场景，优势，原理，及在PostgreSQL中的实现和注意事项。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/sql/SQL3/partition_arch.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/2015/12/13/SQL3_partition/"/>
+
+
+
+
+
+  <title>
+  
+    SQL优化（三） PostgreSQL Table Partitioning | 技术世界 | SQL,sql,SQL优化,sql优化,数据库,PostgreSQL,postgres,表分区,partition,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/2015/12/13/SQL3_partition/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                SQL优化（三） PostgreSQL Table Partitioning
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2015-12-13T12:13:05+08:00">
+                2015-12-13
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-03-15T21:17:39+08:00">
+                2017-03-15
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/" itemprop="url" rel="index">
+                    <span itemprop="name">PostgreSQL</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/" itemprop="url" rel="index">
+                    <span itemprop="name">Database</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/SQL优化/" itemprop="url" rel="index">
+                    <span itemprop="name">SQL优化</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/SQL优化/SQL/" itemprop="url" rel="index">
+                    <span itemprop="name">SQL</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/12/13/SQL3_partition/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/2015/12/13/SQL3_partition/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2015/12/13/SQL3_partition/" class="leancloud_visitors" data-flag-title="SQL优化（三） PostgreSQL Table Partitioning">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  9,383
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文介绍了数据库分区表的使用场景，优势，原理，及在PostgreSQL中的实现和注意事项。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/12/13/SQL3_partition/">原文链接</a>　<a href="http://www.jasongj.com/2015/12/13/SQL3_partition/">http://www.jasongj.com/2015/12/13/SQL3_partition/</a></p>
+</blockquote>
+<h1 id="典型使用场景"><a href="#典型使用场景" class="headerlink" title="典型使用场景"></a>典型使用场景</h1><p>　　随着使用时间的增加，数据库中的数据量也不断增加，因此数据库查询越来越慢。<br>　　加速数据库的方法很多，如添加特定的索引，将日志目录换到单独的磁盘分区，调整数据库引擎的参数等。这些方法都能将数据库的查询性能提高到一定程度。</p>
+<p>　　对于许多应用数据库来说，许多数据是历史数据并且随着时间的推移它们的重要性逐渐降低。如果能找到一个办法将这些可能不太重要的数据隐藏，数据库查询速度将会大幅提高。可以通过<code>DELETE</code>来达到此目的，但同时这些数据就永远不可用了。<br>　　因此，需要一个高效的把历史数据从当前查询中隐藏起来并且不造成数据丢失的方法。本文即将介绍的数据库表分区即能达到此效果。</p>
+<h1 id="数据库表分区介绍"><a href="#数据库表分区介绍" class="headerlink" title="数据库表分区介绍"></a>数据库表分区介绍</h1><p>　　数据库表分区把一个大的物理表分成若干个小的物理表，并使得这些小物理表在逻辑上可以被当成一张表来使用。<br><img src="http://www.jasongj.com/img/sql/SQL3/partition_arch.png" alt="Table partitioning architecture"></p>
+<h2 id="数据库表分区术语介绍"><a href="#数据库表分区术语介绍" class="headerlink" title="数据库表分区术语介绍"></a>数据库表分区术语介绍</h2><ul>
+<li><code>主表</code> / <code>父表</code> / <code>Master Table</code>　该表是创建子表的模板。它是一个正常的普通表，但正常情况下它并不储存任何数据。</li>
+<li><code>子表</code> / <code>分区表</code> / <code>Child Table</code> / <code>Partition Table</code>　这些表继承并属于一个主表。子表中存储所有的数据。主表与分区表属于一对多的关系，也就是说，一个主表包含多个分区表，而一个分区表只从属于一个主表</li>
+</ul>
+<h2 id="数据库表分区的优势"><a href="#数据库表分区的优势" class="headerlink" title="数据库表分区的优势"></a>数据库表分区的优势</h2><ul>
+<li>在特定场景下，查询性能极大提高，尤其是当大部分经常访问的数据记录在一个或少数几个分区表上时。表分区减小了索引的大小，并使得常访问的分区表的索引更容易保存于内存中。</li>
+<li>当查询或者更新访问一个或少数几个分区表中的大部分数据时，可以通过顺序扫描该分区表而非使用大表索引来提高性能。</li>
+<li>可通过添加或移除分区表来高效的批量增删数据。如可使用<code>ALTER TABLE NO INHERIT</code>可将特定分区从主逻辑表中移除（该表依然存在，并可单独使用，只是与主表不再有继承关系并无法再通过主表访问该分区表），或使用<code>DROP TABLE</code>直接将该分区表删除。这两种方式完全避免了使用<code>DELETE</code>时所需的<code>VACUUM</code>额外代价。</li>
+<li>很少使用的数据可被迁移到便宜些的慢些的存储介质中</li>
+</ul>
+<p>　　以上优势只有当表非常大的时候才能体现出来。一般来说，当表的大小超过数据库服务器的物理内存时以上优势才能体现出来</p>
+<h2 id="PostgreSQL表分区"><a href="#PostgreSQL表分区" class="headerlink" title="PostgreSQL表分区"></a>PostgreSQL表分区</h2><p>　　现在PostgreSQL支持通过表继承来实现表的分区。父表是普通表并且正常情况下并不存储任何数据，它的存在只是为了代表整个数据集。PostgreSQL可实现如下两种表分区</p>
+<ul>
+<li><strong><em>范围分区</em></strong>　每个分区表包含一个或多个字段组合的一部分，并且每个分区表的范围互不重叠。比如可近日期范围分区</li>
+<li><strong><em>列表分区</em></strong>　分区表显示列出其所包含的key值</li>
+</ul>
+<h1 id="表分区在PostgreSQL上的实现"><a href="#表分区在PostgreSQL上的实现" class="headerlink" title="表分区在PostgreSQL上的实现"></a>表分区在PostgreSQL上的实现</h1><h2 id="在PostgreSQL中实现表分区的步骤"><a href="#在PostgreSQL中实现表分区的步骤" class="headerlink" title="在PostgreSQL中实现表分区的步骤"></a>在PostgreSQL中实现表分区的步骤</h2><ol>
+<li><p>创建主表。不用为该表定义任何检查限制，除非需要将该限制应用到所有的分区表中。同样也无需为该表创建任何索引和唯一限制。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> almart</div><div class="line">(</div><div class="line">	date_key <span class="built_in">date</span>,</div><div class="line">	hour_key <span class="built_in">smallint</span>,</div><div class="line">	client_key <span class="built_in">integer</span>,</div><div class="line">	item_key <span class="built_in">integer</span>,</div><div class="line">	<span class="keyword">account</span> <span class="built_in">integer</span>,</div><div class="line">	expense <span class="built_in">numeric</span></div><div class="line">);</div></pre></td></tr></table></figure>
+</li>
+<li><p>创建多个分区表。每个分区表必须继承自主表，并且正常情况下都不要为这些分区表添加任何新的列。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> almart_2015_12_10 () inherits (almart);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> almart_2015_12_11 () inherits (almart);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> almart_2015_12_12 () inherits (almart);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> almart_2015_12_13 () inherits (almart);</div></pre></td></tr></table></figure>
+</li>
+<li><p>为分区表添加限制。这些限制决定了该表所能允许保存的数据集范围。这里必须保证各个分区表之间的限制不能有重叠。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> almart_2015_12_10</div><div class="line"><span class="keyword">ADD</span> <span class="keyword">CONSTRAINT</span> almart_2015_12_10_check_date_key</div><div class="line"><span class="keyword">CHECK</span> (date_Key = <span class="string">'2015-12-10'</span>::<span class="built_in">date</span>);</div><div class="line"></div><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> almart_2015_12_11</div><div class="line"><span class="keyword">ADD</span> <span class="keyword">CONSTRAINT</span> almart_2015_12_10_check_date_key</div><div class="line"><span class="keyword">CHECK</span> (date_Key = <span class="string">'2015-12-11'</span>::<span class="built_in">date</span>);</div><div class="line"></div><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> almart_2015_12_12</div><div class="line"><span class="keyword">ADD</span> <span class="keyword">CONSTRAINT</span> almart_2015_12_10_check_date_key</div><div class="line"><span class="keyword">CHECK</span> (date_Key = <span class="string">'2015-12-12'</span>::<span class="built_in">date</span>);</div><div class="line"></div><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> almart_2015_12_13</div><div class="line"><span class="keyword">ADD</span> <span class="keyword">CONSTRAINT</span> almart_2015_12_10_check_date_key</div><div class="line"><span class="keyword">CHECK</span> (date_Key = <span class="string">'2015-12-13'</span>::<span class="built_in">date</span>);</div></pre></td></tr></table></figure>
+</li>
+<li><p>为每一个分区表，在主要的列上创建索引。该索引并不是严格必须创建的，但在大部分场景下，它都非常有用。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> almart_date_key_2015_12_10</div><div class="line"><span class="keyword">ON</span> almart_2015_12_10 (date_key);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> almart_date_key_2015_12_11</div><div class="line"><span class="keyword">ON</span> almart_2015_12_11 (date_key);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> almart_date_key_2015_12_12</div><div class="line"><span class="keyword">ON</span> almart_2015_12_12 (date_key);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> almart_date_key_2015_12_13</div><div class="line"><span class="keyword">ON</span> almart_2015_12_13 (date_key);</div></pre></td></tr></table></figure>
+</li>
+<li><p>定义一个trigger或者rule把对主表的数据插入操作重定向到对应的分区表。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="comment">--创建分区函数</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> almart_partition_trigger()</div><div class="line"><span class="keyword">RETURNS</span> <span class="keyword">TRIGGER</span> <span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">    <span class="keyword">IF</span> NEW.date_key = <span class="built_in">DATE</span> <span class="string">'2015-12-10'</span></div><div class="line">    <span class="keyword">THEN</span></div><div class="line">        <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_10 <span class="keyword">VALUES</span> (NEW.*);</div><div class="line">    ELSIF NEW.date_key = DATE '2015-12-11'</div><div class="line">    THEN</div><div class="line">        <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_11 <span class="keyword">VALUES</span> (NEW.*);</div><div class="line">    ELSIF NEW.date_key = DATE '2015-12-12'</div><div class="line">    THEN</div><div class="line">        <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_12 <span class="keyword">VALUES</span> (NEW.*);</div><div class="line">    ELSIF NEW.date_key = DATE '2015-12-13'</div><div class="line">    THEN</div><div class="line">        <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_13 <span class="keyword">VALUES</span> (NEW.*);</div><div class="line">    ELSIF NEW.date_key = DATE '2015-12-14'</div><div class="line">    THEN</div><div class="line">        <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_14 <span class="keyword">VALUES</span> (NEW.*);</div><div class="line">    <span class="keyword">END</span> <span class="keyword">IF</span>;</div><div class="line">    RETURN NULL;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$</div><div class="line">LANGUAGE plpgsql;</div><div class="line"></div><div class="line"><span class="comment">--挂载分区Trigger</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TRIGGER</span> insert_almart_partition_trigger</div><div class="line"><span class="keyword">BEFORE</span> <span class="keyword">INSERT</span> <span class="keyword">ON</span> almart</div><div class="line"><span class="keyword">FOR</span> <span class="keyword">EACH</span> <span class="keyword">ROW</span> <span class="keyword">EXECUTE</span> <span class="keyword">PROCEDURE</span> almart_partition_trigger();</div></pre></td></tr></table></figure>
+</li>
+<li><p>确保postgresql.conf中的<a href="http://www.postgresql.org/docs/9.1/static/runtime-config-query.html#GUC-CONSTRAINT-EXCLUSION" target="_blank" rel="external">constraint_exclusion</a>配置项没有被disable。这一点非常重要，如果该参数项被disable，则基于分区表的查询性能无法得到优化，甚至比不使用分区表直接使用索引性能更低。</p>
+</li>
+</ol>
+<h2 id="表分区如何加速查询优化"><a href="#表分区如何加速查询优化" class="headerlink" title="表分区如何加速查询优化"></a>表分区如何加速查询优化</h2><p>　　当<code>constraint_exclusion</code>为<code>on</code>或者<code>partition</code>时，查询计划器会根据分区表的检查限制将对主表的查询限制在符合检查限制条件的分区表上，直接避免了对不符合条件的分区表的扫描。<br>　　为了验证分区表的优势，这里创建一个与上文创建的almart结构一样的表almart_all，并为其date_key创建索引，向almart和almart_all中插入同样的9000万条数据（数据的时间跨度为2015-12-01到2015-12-30）。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> almart_all</div><div class="line">(</div><div class="line">	date_key <span class="built_in">date</span>,</div><div class="line">	hour_key <span class="built_in">smallint</span>,</div><div class="line">	client_key <span class="built_in">integer</span>,</div><div class="line">	item_key <span class="built_in">integer</span>,</div><div class="line">	<span class="keyword">account</span> <span class="built_in">integer</span>,</div><div class="line">	expense <span class="built_in">numeric</span></div><div class="line">);</div></pre></td></tr></table></figure></p>
+<p>　　插入随机测试数据到almart_all<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span></div><div class="line">	almart_all</div><div class="line"><span class="keyword">select</span></div><div class="line">	(<span class="keyword">select</span></div><div class="line">		array_agg(i::<span class="built_in">date</span>)</div><div class="line">	<span class="keyword">from</span></div><div class="line">		generate_series(</div><div class="line">		<span class="string">'2015-12-01'</span>::<span class="built_in">date</span>,</div><div class="line">		<span class="string">'2015-12-30'</span>::<span class="built_in">date</span>,</div><div class="line">		<span class="string">'1 day'</span>::<span class="built_in">interval</span>) <span class="keyword">as</span> t(i)</div><div class="line">	)[<span class="keyword">floor</span>(random()*<span class="number">4</span>)+<span class="number">1</span>] <span class="keyword">as</span> date_key,</div><div class="line">	<span class="keyword">floor</span>(random()*<span class="number">24</span>) <span class="keyword">as</span> hour_key,</div><div class="line">	<span class="keyword">floor</span>(random()*<span class="number">1000000</span>)+<span class="number">1</span> <span class="keyword">as</span> client_key,</div><div class="line">	<span class="keyword">floor</span>(random()*<span class="number">100000</span>)+<span class="number">1</span> <span class="keyword">as</span> item_key,</div><div class="line">	<span class="keyword">floor</span>(random()*<span class="number">20</span>)+<span class="number">1</span> <span class="keyword">as</span> <span class="keyword">account</span>,</div><div class="line">	<span class="keyword">floor</span>(random()*<span class="number">10000</span>)+<span class="number">1</span> <span class="keyword">as</span> expense</div><div class="line"><span class="keyword">from</span></div><div class="line">	generate_series(<span class="number">1</span>,<span class="number">300000000</span>,<span class="number">1</span>);</div></pre></td></tr></table></figure></p>
+<p>　　插入同样的测试数据到almart<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart_all;</div></pre></td></tr></table></figure></p>
+<p>　　在almart和slmart_all上执行同样的query，查询2015-12-15日不同client_key的平均消费额。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div></pre></td><td class="code"><pre><div class="line">\timing</div><div class="line"><span class="keyword">explain</span> <span class="keyword">analyze</span></div><div class="line"><span class="keyword">select</span></div><div class="line">	<span class="keyword">avg</span>(expense)</div><div class="line"><span class="keyword">from</span></div><div class="line">	(<span class="keyword">select</span></div><div class="line">		client_key,</div><div class="line">		<span class="keyword">sum</span>(expense) <span class="keyword">as</span> expense</div><div class="line">	<span class="keyword">from</span></div><div class="line">		almart</div><div class="line">	<span class="keyword">where</span></div><div class="line">		date_key = <span class="built_in">date</span> <span class="string">'2015-12-15'</span></div><div class="line">	<span class="keyword">group</span> <span class="keyword">by</span> <span class="number">1</span></div><div class="line">	)；</div><div class="line">                                         <span class="keyword">QUERY</span> PLAN</div><div class="line"><span class="comment">-----------------------------------------------------------------------------------------------------------------------------------------------------------------------</span></div><div class="line"> <span class="keyword">Aggregate</span>  (<span class="keyword">cost</span>=<span class="number">19449.05</span>.<span class="number">.19449</span><span class="number">.06</span> <span class="keyword">rows</span>=<span class="number">1</span> width=<span class="number">32</span>) (actual <span class="keyword">time</span>=<span class="number">9474.203</span>.<span class="number">.9474</span><span class="number">.203</span> <span class="keyword">rows</span>=<span class="number">1</span> loops=<span class="number">1</span>)</div><div class="line">   -&gt;  HashAggregate  (<span class="keyword">cost</span>=<span class="number">19196.10</span>.<span class="number">.19308</span><span class="number">.52</span> <span class="keyword">rows</span>=<span class="number">11242</span> width=<span class="number">36</span>) (actual <span class="keyword">time</span>=<span class="number">8632.592</span>.<span class="number">.9114</span><span class="number">.973</span> <span class="keyword">rows</span>=<span class="number">949825</span> loops=<span class="number">1</span>)</div><div class="line">         -&gt;  Append  (<span class="keyword">cost</span>=<span class="number">0.00</span>.<span class="number">.19139</span><span class="number">.89</span> <span class="keyword">rows</span>=<span class="number">11242</span> width=<span class="number">36</span>) (actual <span class="keyword">time</span>=<span class="number">4594.262</span>.<span class="number">.6091</span><span class="number">.630</span> <span class="keyword">rows</span>=<span class="number">2997704</span> loops=<span class="number">1</span>)</div><div class="line">               -&gt;  Seq <span class="keyword">Scan</span> <span class="keyword">on</span> almart  (<span class="keyword">cost</span>=<span class="number">0.00</span>.<span class="number">.0</span><span class="number">.00</span> <span class="keyword">rows</span>=<span class="number">1</span> width=<span class="number">9</span>) (actual <span class="keyword">time</span>=<span class="number">0.002</span>.<span class="number">.0</span><span class="number">.002</span> <span class="keyword">rows</span>=<span class="number">0</span> loops=<span class="number">1</span>)</div><div class="line">                     Filter: (date_key = <span class="string">'2015-12-15'</span>::<span class="built_in">date</span>)</div><div class="line">               -&gt;  <span class="keyword">Bitmap</span> <span class="keyword">Heap</span> <span class="keyword">Scan</span> <span class="keyword">on</span> almart_2015_12_15  (<span class="keyword">cost</span>=<span class="number">299.55</span>.<span class="number">.19139</span><span class="number">.89</span> <span class="keyword">rows</span>=<span class="number">11241</span> width=<span class="number">36</span>) (actual <span class="keyword">time</span>=<span class="number">4594.258</span>.<span class="number">.5842</span><span class="number">.708</span> <span class="keyword">rows</span>=<span class="number">2997704</span> loops=<span class="number">1</span>)</div><div class="line">                     Recheck Cond: (date_key = <span class="string">'2015-12-15'</span>::<span class="built_in">date</span>)</div><div class="line">                     -&gt;  <span class="keyword">Bitmap</span> <span class="keyword">Index</span> <span class="keyword">Scan</span> <span class="keyword">on</span> almart_date_key_2015_12_15  (<span class="keyword">cost</span>=<span class="number">0.00</span>.<span class="number">.296</span><span class="number">.74</span> <span class="keyword">rows</span>=<span class="number">11241</span> width=<span class="number">0</span>) (actual <span class="keyword">time</span>=<span class="number">4587.582</span>.<span class="number">.4587</span><span class="number">.582</span> <span class="keyword">rows</span>=<span class="number">2997704</span> loops=<span class="number">1</span>)</div><div class="line">                           <span class="keyword">Index</span> Cond: (date_key = <span class="string">'2015-12-15'</span>::<span class="built_in">date</span>)</div><div class="line"> Total runtime: <span class="number">9506.507</span> ms</div><div class="line">(<span class="number">10</span> <span class="keyword">rows</span>)</div><div class="line"></div><div class="line"><span class="keyword">Time</span>: <span class="number">9692.352</span> ms</div><div class="line"></div><div class="line"><span class="keyword">explain</span> <span class="keyword">analyze</span></div><div class="line"><span class="keyword">select</span></div><div class="line">	<span class="keyword">avg</span>(expense)</div><div class="line"><span class="keyword">from</span></div><div class="line">	(<span class="keyword">select</span></div><div class="line">		client_key,</div><div class="line">		<span class="keyword">sum</span>(expense) <span class="keyword">as</span> expense</div><div class="line">	<span class="keyword">from</span></div><div class="line">		almart_all</div><div class="line">	<span class="keyword">where</span></div><div class="line">		date_key = <span class="built_in">date</span> <span class="string">'2015-12-15'</span></div><div class="line">	<span class="keyword">group</span> <span class="keyword">by</span> <span class="number">1</span></div><div class="line">	) foo；</div><div class="line">                                         <span class="keyword">QUERY</span> PLAN</div><div class="line"><span class="comment">------------------------------------------------------------------------------------------------------------------------------------------------------------------</span></div><div class="line"> <span class="keyword">Aggregate</span>  (<span class="keyword">cost</span>=<span class="number">770294.11</span>.<span class="number">.770294</span><span class="number">.12</span> <span class="keyword">rows</span>=<span class="number">1</span> width=<span class="number">32</span>) (actual <span class="keyword">time</span>=<span class="number">62959.917</span>.<span class="number">.62959</span><span class="number">.917</span> <span class="keyword">rows</span>=<span class="number">1</span> loops=<span class="number">1</span>)</div><div class="line">   -&gt;  HashAggregate  (<span class="keyword">cost</span>=<span class="number">769549.54</span>.<span class="number">.769880</span><span class="number">.46</span> <span class="keyword">rows</span>=<span class="number">33092</span> width=<span class="number">9</span>) (actual <span class="keyword">time</span>=<span class="number">61694.564</span>.<span class="number">.62574</span><span class="number">.385</span> <span class="keyword">rows</span>=<span class="number">949825</span> loops=<span class="number">1</span>)</div><div class="line">         -&gt;  <span class="keyword">Bitmap</span> <span class="keyword">Heap</span> <span class="keyword">Scan</span> <span class="keyword">on</span> almart_all  (<span class="keyword">cost</span>=<span class="number">55704.56</span>.<span class="number">.754669</span><span class="number">.55</span> <span class="keyword">rows</span>=<span class="number">2975999</span> width=<span class="number">9</span>) (actual <span class="keyword">time</span>=<span class="number">919.941</span>.<span class="number">.56291</span><span class="number">.128</span> <span class="keyword">rows</span>=<span class="number">2997704</span> loops=<span class="number">1</span>)</div><div class="line">               Recheck Cond: (date_key = <span class="string">'2015-12-15'</span>::<span class="built_in">date</span>)</div><div class="line">               -&gt;  <span class="keyword">Bitmap</span> <span class="keyword">Index</span> <span class="keyword">Scan</span> <span class="keyword">on</span> almart_all_date_key_index  (<span class="keyword">cost</span>=<span class="number">0.00</span>.<span class="number">.54960</span><span class="number">.56</span> <span class="keyword">rows</span>=<span class="number">2975999</span> width=<span class="number">0</span>) (actual <span class="keyword">time</span>=<span class="number">677.741</span>.<span class="number">.677</span><span class="number">.741</span> <span class="keyword">rows</span>=<span class="number">2997704</span> loops=<span class="number">1</span>)</div><div class="line">                     <span class="keyword">Index</span> Cond: (date_key = <span class="string">'2015-12-15'</span>::<span class="built_in">date</span>)</div><div class="line"> Total runtime: <span class="number">62960.228</span> ms</div><div class="line">(<span class="number">7</span> <span class="keyword">rows</span>)</div><div class="line"></div><div class="line"><span class="keyword">Time</span>: <span class="number">62970.269</span> ms</div></pre></td></tr></table></figure></p>
+<p>　　由上可见，使用分区表时，所需时间为9.5秒，而不使用分区表时，耗时63秒。<br>　　使用分区表，PostgreSQL跳过了除2015-12-15日分区表以外的分区表，只扫描2015-12-15的分区表。而不使用分区表只使用索引时，数据库要使用索引扫描整个数据库。另一方面，使用分区表时，每个表的索引是独立的，即每个分区表的索引都只针对一个小的分区表。而不使用分区表时，索引是建立在整个大表上的。数据量越大，索引的速度相对越慢。</p>
+<h2 id="管理分区"><a href="#管理分区" class="headerlink" title="管理分区"></a>管理分区</h2><p>　　从上文分区表的创建过程可以看出，分区表必须在相关数据插入之前创建好。在生产环境中，很难保证所需的分区表都已经被提前创建好。同时为了不让分区表过多，影响数据库性能，不能创建过多无用的分区表。</p>
+<h3 id="周期性创建分区表"><a href="#周期性创建分区表" class="headerlink" title="周期性创建分区表"></a>周期性创建分区表</h3><p>　　在生产环境中，经常需要周期性删除和创建一些分区表。一个经典的做法是使用定时任务。比如使用cronjob每天运行一次，将1年前的分区表删除，并创建第二天分区表（该表按天分区）。有时为了容错，会将之后一周的分区表全部创建出来。</p>
+<h3 id="动态创建分区表"><a href="#动态创建分区表" class="headerlink" title="动态创建分区表"></a>动态创建分区表</h3><p>　　上述周期性创建分区表的方法在绝大部分情况下有效，但也只能在一定程度上容错。另外，上文所使用的分区函数，使用<code>IF</code>语句对date_key进行判断，需要为每一个分区表准备一个<code>IF</code>语句。<br>　　如插入<code>date_key</code>分别为<code>2015-12-10</code>到<code>2015-12-14</code>的5条记录，前面4条均可插入成功，因为相应的分区表已经存在，但最后一条数据因为相应的分区表不存在而插入失败。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart(date_key) <span class="keyword">VALUES</span> (<span class="string">'2015-12-10'</span>);</div><div class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">0</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart(date_key) <span class="keyword">VALUES</span> (<span class="string">'2015-12-11'</span>);</div><div class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">0</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart(date_key) <span class="keyword">VALUES</span> (<span class="string">'2015-12-12'</span>);</div><div class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">0</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart(date_key) <span class="keyword">VALUES</span> (<span class="string">'2015-12-13'</span>);</div><div class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">0</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart(date_key) <span class="keyword">VALUES</span> (<span class="string">'2015-12-14'</span>);</div><div class="line">ERROR:  relation "almart_2015_12_14" does not exist</div><div class="line">LINE 1: <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_14 <span class="keyword">VALUES</span> (NEW.*)</div><div class="line">                    ^</div><div class="line"><span class="keyword">QUERY</span>:  <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_14 <span class="keyword">VALUES</span> (NEW.*)</div><div class="line"><span class="keyword">CONTEXT</span>:  PL/pgSQL <span class="keyword">function</span> almart_partition_trigger() line <span class="number">17</span> <span class="keyword">at</span> <span class="keyword">SQL</span> <span class="keyword">statement</span></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart;</div><div class="line">  date_key  | hour_key | client_key | item_key | account | expense</div><div class="line"><span class="comment">------------+----------+------------+----------+---------+---------</span></div><div class="line"> 2015-12-10 |          |            |          |         |</div><div class="line"> 2015-12-11 |          |            |          |         |</div><div class="line"> 2015-12-12 |          |            |          |         |</div><div class="line"> 2015-12-13 |          |            |          |         |</div><div class="line">(4 rows)</div></pre></td></tr></table></figure></p>
+<p>　　针对该问题，可使用动态SQL的方式进行数据路由，并通过获取将数据插入不存在的分区表产生的异常消息并动态创建分区表的方式保证分区表的可用性。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> almart_partition_trigger()</div><div class="line"><span class="keyword">RETURNS</span> <span class="keyword">TRIGGER</span> <span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">DECLARE</span> date_text <span class="built_in">TEXT</span>;</div><div class="line"><span class="keyword">DECLARE</span> insert_statement <span class="built_in">TEXT</span>;</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">SELECT</span> to_char(NEW.date_key, <span class="string">'YYYY_MM_DD'</span>) <span class="keyword">INTO</span> date_text;</div><div class="line">	insert_statement := '<span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_<span class="string">'</span></div><div class="line">		|| date_text</div><div class="line">		||' <span class="keyword">VALUES</span> ($<span class="number">1.</span>*)<span class="string">';</span></div><div class="line">	EXECUTE insert_statement USING NEW;</div><div class="line">	RETURN NULL;</div><div class="line">	EXCEPTION</div><div class="line">	WHEN UNDEFINED_TABLE</div><div class="line">	THEN</div><div class="line">		EXECUTE</div><div class="line">			'<span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> almart_<span class="string">'</span></div><div class="line">			|| date_text</div><div class="line">			|| '(<span class="keyword">CHECK</span> (date_key = <span class="string">'''</span></div><div class="line">			|| date_text</div><div class="line">			|| ''')) INHERITS (almart)<span class="string">';</span></div><div class="line">		RAISE NOTICE '<span class="keyword">CREATE</span> NON-EXISTANT <span class="keyword">TABLE</span> almart_%<span class="string">', date_text;</span></div><div class="line">		EXECUTE</div><div class="line">			'<span class="keyword">CREATE</span> <span class="keyword">INDEX</span> almart_date_key_<span class="string">'</span></div><div class="line">			|| date_text</div><div class="line">			|| ' <span class="keyword">ON</span> almart_<span class="string">'</span></div><div class="line">			|| date_text</div><div class="line">			|| '(date_key)<span class="string">';</span></div><div class="line">		EXECUTE insert_statement USING NEW;</div><div class="line">    RETURN NULL;</div><div class="line">END;</div><div class="line">$$</div><div class="line">LANGUAGE plpgsql;</div></pre></td></tr></table></figure></p>
+<p>　　使用该方法后，再次插入<code>date_key</code>为<code>2015-12-14</code>的记录时，对应的分区表不存在，但会被自动创建。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart <span class="keyword">VALUES</span>(<span class="string">'2015-12-13'</span>),(<span class="string">'2015-12-14'</span>),(<span class="string">'2015-12-15'</span>);</div><div class="line">NOTICE:  <span class="keyword">CREATE</span> NON-EXISTANT <span class="keyword">TABLE</span> almart_2015_12_14</div><div class="line"><span class="keyword">NOTICE</span>:  <span class="keyword">CREATE</span> NON-EXISTANT <span class="keyword">TABLE</span> almart_2015_12_15</div><div class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">0</span></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart;</div><div class="line">  date_key  | hour_key | client_key | item_key | account | expense</div><div class="line"><span class="comment">------------+----------+------------+----------+---------+---------</span></div><div class="line"> 2015-12-10 |          |            |          |         |</div><div class="line"> 2015-12-11 |          |            |          |         |</div><div class="line"> 2015-12-12 |          |            |          |         |</div><div class="line"> 2015-12-13 |          |            |          |         |</div><div class="line"> 2015-12-13 |          |            |          |         |</div><div class="line"> 2015-12-14 |          |            |          |         |</div><div class="line"> 2015-12-15 |          |            |          |         |</div><div class="line">(7 rows)</div></pre></td></tr></table></figure></p>
+<h3 id="移除分区表"><a href="#移除分区表" class="headerlink" title="移除分区表"></a>移除分区表</h3><p>　　虽然如上文所述，分区表的使用可以跳过扫描不必要的分区表从而提高查询速度。但由于服务器磁盘的限制，不可能无限制存储所有数据，经常需要周期性删除过期数据，如删除5年前的数据。如果使用传统的<code>DELETE</code>，删除速度慢，并且由于<code>DELETE</code>只是将相应数据标记为删除状态，不会将数据从磁盘删除，需要使用<code>VACUUM</code>释放磁盘，从而引入额外负载。<br>　　而在使用分区表的条件下，可以通过直接<code>DROP</code>过期分区表的方式快速方便地移除过期数据。如<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">DROP</span> <span class="keyword">TABLE</span> almart_2014_12_15;</div></pre></td></tr></table></figure></p>
+<p>　　另外，无论使用<code>DELETE</code>还是<code>DROP</code>，都会将数据完全删除，即使有需要也无法再次使用。因此还有另外一种方式，即更改过期的分区表，解除其与主表的继承关系，如。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> almart_2015_12_15 <span class="keyword">NO</span> INHERIT almart;</div></pre></td></tr></table></figure></p>
+<p>　　但该方法并未释放磁盘。此时可通过更改该分区表，使其属于其它<a href="http://www.postgresql.org/docs/9.4/static/manage-ag-tablespaces.html" target="_blank" rel="external">TABLESPACE</a>，同时将该TABLESPACE的目录设置为其它磁盘分区上的目录，从而释放主表所在的磁盘。同时，如果之后还需要再次使用该“过期”数据，只需更改该分区表，使其再次与主表形成继承关系。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLESPACE</span> cheap_table_space LOCATION <span class="string">'/data/cheap_disk'</span>;</div><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> almart_2014_12_15 <span class="keyword">SET</span> <span class="keyword">TABLESPACE</span> cheap_table_space;</div></pre></td></tr></table></figure></p>
+<h2 id="PostgreSQL表分区的其它方式"><a href="#PostgreSQL表分区的其它方式" class="headerlink" title="PostgreSQL表分区的其它方式"></a>PostgreSQL表分区的其它方式</h2><p>　　除了使用Trigger外，可以使用Rule将对主表的插入请求重定向到对应的子表。如<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> RULE almart_rule_2015_12_31 <span class="keyword">AS</span></div><div class="line"><span class="keyword">ON</span> <span class="keyword">INSERT</span> <span class="keyword">TO</span> almart</div><div class="line"><span class="keyword">WHERE</span></div><div class="line">    date_key = <span class="built_in">DATE</span> <span class="string">'2015-12-31'</span></div><div class="line"><span class="keyword">DO</span> INSTEAD</div><div class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> almart_2015_12_31 <span class="keyword">VALUES</span> (NEW.*);</div></pre></td></tr></table></figure></p>
+<p>　　与Trigger相比，Rule会带来更大的额外开销，但每个请求只造成一次开销而非每条数据都引入一次开销，所以该方法对大批量的数据插入操作更具优势。然而，实际上在绝大部分场景下，Trigger比Rule的效率更高。</p>
+<p>　　同时，<code>COPY</code>操作会忽略Rule，而可以正常触发Trigger。</p>
+<p>　　另外，如果使用Rule方式，没有比较简单的方法处理没有被Rule覆盖到的插入操作。此时该数据会被插入到主表中而不会报错，从而无法有效利用表分区的优势。</p>
+<p>　　除了使用表继承外，还可使用<code>UNION ALL</code>的方式达到表分区的效果。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">VIEW</span> almart <span class="keyword">AS</span></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart_2015_12_10</div><div class="line"><span class="keyword">UNION</span> ALL</div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart_2015_12_11</div><div class="line"><span class="keyword">UNION</span> ALL</div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart_2015_12_12</div><div class="line">...</div><div class="line"><span class="keyword">UNION</span> ALL</div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> almart_2015_12_30;</div></pre></td></tr></table></figure></p>
+<p>　　当有新的分区表时，需要更新该View。实践中，与使用表继承相比，一般不推荐使用该方法。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><ul>
+<li>如果要充分使用分区表的查询优势，必须使用分区时的字段作为过滤条件</li>
+<li>分区字段被用作过滤条件时，<code>WHERE</code>语句只能包含常量而不能使用参数化的表达式，因为这些表达式只有在运行时才能确定其值，而planner在真正执行query之前无法判定哪些分区表应该被使用</li>
+<li>跳过不符合条件分区表是通过planner根据分区表的检查限制条件实现的，而非通过索引</li>
+<li>必须将<code>constraint_exclusion</code>设置为<code>ON</code>或<code>Partition</code>，否则planner将无法正常跳过不符合条件的分区表，也即无法发挥表分区的优势</li>
+<li>除了在查询上的优势，分区表的使用，也可提高删除旧数据的性能</li>
+<li>为了充分利用分区表的优势，应该保证各分区表的检查限制条件互斥，但目前并无自动化的方式来保证这一点。因此使用代码造化创建或者修改分区表比手工操作更安全</li>
+<li>在更新数据集时，如果使得partition key column(s)变化到需要使某些数据移动到其它分区，则该更新操作会因为检查限制的存在而失败。如果一定要处理这种情景，可以使用更新Trigger，但这会使得结构变得复杂。</li>
+<li>大量的分区表会极大地增加查询计划时间。表分区在多达几百个分区表时能很好地发挥优势，但不要使用多达几千个分区表。</li>
+</ul>
+<h1 id="SQL优化系列"><a href="#SQL优化系列" class="headerlink" title="SQL优化系列"></a>SQL优化系列</h1><ul>
+<li><a href="http://www.jasongj.com/2015/03/07/Join1/">SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop</a></li>
+<li><a href="http://www.jasongj.com/2015/03/15/count_distinct/">SQL优化（二） 快速计算Distinct Count</a></li>
+<li><a href="http://www.jasongj.com/2015/12/13/SQL3_partition/">SQL优化（三） PostgreSQL Table Partitioning</a></li>
+<li><a href="http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/">SQL优化（四） Postgre Sql存储过程</a></li>
+<li><a href="http://www.jasongj.com/sql/cte/">SQL优化（五） PostgreSQL （递归）CTE 通用表表达式</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: '2015/12/13/SQL3_partition/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          
+            <a href="/tags/Database/" rel="tag"># Database</a>
+          
+            <a href="/tags/SQL优化/" rel="tag"># SQL优化</a>
+          
+            <a href="/tags/SQL/" rel="tag"># SQL</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/08/09/KafkaColumn4/" rel="next" title="Kafka设计解析（四）- Kafka Consumer设计解析">
+                <i class="fa fa-chevron-left"></i> Kafka设计解析（四）- Kafka Consumer设计解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/12/27/SQL4_存储过程_Store Procedure/" rel="prev" title="SQL优化（四） PostgreSQL存储过程">
+                SQL优化（四） PostgreSQL存储过程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/2015/12/13/SQL3_partition/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/2015/12/13/SQL3_partition/'),
+                identifier: decodeURI('/2015/12/13/SQL3_partition/'),
+                title: 'SQL优化（三） PostgreSQL Table Partitioning',
+                slug: '2015/12/13/SQL3_partition/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#典型使用场景"><span class="nav-number">1.</span> <span class="nav-text">典型使用场景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#数据库表分区介绍"><span class="nav-number">2.</span> <span class="nav-text">数据库表分区介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#数据库表分区术语介绍"><span class="nav-number">2.1.</span> <span class="nav-text">数据库表分区术语介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据库表分区的优势"><span class="nav-number">2.2.</span> <span class="nav-text">数据库表分区的优势</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL表分区"><span class="nav-number">2.3.</span> <span class="nav-text">PostgreSQL表分区</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#表分区在PostgreSQL上的实现"><span class="nav-number">3.</span> <span class="nav-text">表分区在PostgreSQL上的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#在PostgreSQL中实现表分区的步骤"><span class="nav-number">3.1.</span> <span class="nav-text">在PostgreSQL中实现表分区的步骤</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#表分区如何加速查询优化"><span class="nav-number">3.2.</span> <span class="nav-text">表分区如何加速查询优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#管理分区"><span class="nav-number">3.3.</span> <span class="nav-text">管理分区</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#周期性创建分区表"><span class="nav-number">3.3.1.</span> <span class="nav-text">周期性创建分区表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#动态创建分区表"><span class="nav-number">3.3.2.</span> <span class="nav-text">动态创建分区表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#移除分区表"><span class="nav-number">3.3.3.</span> <span class="nav-text">移除分区表</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL表分区的其它方式"><span class="nav-number">3.4.</span> <span class="nav-text">PostgreSQL表分区的其它方式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SQL优化系列"><span class="nav-number">5.</span> <span class="nav-text">SQL优化系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/2015/12/13/SQL3_partition/';
+          this.page.identifier = '2015/12/13/SQL3_partition/';
+          this.page.title = '2015/12/13/SQL3_partition/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

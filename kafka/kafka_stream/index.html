@@ -1,0 +1,1341 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,大数据架构,kafka Stream,流处理,流计算,streaming,stream processing,技术世界" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka设计解析（七）- Kafka Stream">
+<meta property="og:url" content="http://www.jasongj.com/kafka/kafka_stream/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/batch_procissing.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/library.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/Kafka%20Stream%20Architecture.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/1%20thread.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/2%20threads.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/2%20instances.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/2%20servers.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/ktable_kstream.png">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/Hopping%20Time%20Window.gif">
+<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/Tumbling Time Window.gif">
+<meta property="og:updated_time" content="2017-08-07T00:01:01.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kafka设计解析（七）- Kafka Stream">
+<meta name="twitter:description" content="本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示">
+<meta name="twitter:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/kafka/kafka_stream/"/>
+
+
+
+
+
+  <title>
+  
+    Kafka Stream | 技术世界 | kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,大数据架构,kafka Stream,流处理,流计算,streaming,stream processing,技术世界
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/kafka/kafka_stream/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kafka设计解析（七）- Kafka Stream
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-08-07T08:01:01+08:00">
+                2017-08-07
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-08-07T08:01:01+08:00">
+                2017-08-07
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big data</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/大数据/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/kafka/kafka_stream/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/kafka/kafka_stream/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/kafka/kafka_stream/" class="leancloud_visitors" data-flag-title="Kafka设计解析（七）- Kafka Stream">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  8,633
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示例讲解了如何使用Kafka Stream。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/kafka/kafka_stream/">原文链接</a>　<a href="http://www.jasongj.com/kafka/kafka_stream/">http://www.jasongj.com/kafka/kafka_stream/</a></p>
+</blockquote>
+<h1 id="Kafka-Stream背景"><a href="#Kafka-Stream背景" class="headerlink" title="Kafka Stream背景"></a>Kafka Stream背景</h1><h2 id="Kafka-Stream是什么"><a href="#Kafka-Stream是什么" class="headerlink" title="Kafka Stream是什么"></a>Kafka Stream是什么</h2><p>Kafka Stream是Apache Kafka从0.10版本引入的一个新Feature。它是提供了对存储于Kafka内的数据进行流式处理和分析的功能。</p>
+<p>Kafka Stream的特点如下：</p>
+<ul>
+<li>Kafka Stream提供了一个非常简单而轻量的Library，它可以非常方便地嵌入任意Java应用中，也可以任意方式打包和部署</li>
+<li>除了Kafka外，无任何外部依赖</li>
+<li>充分利用Kafka分区机制实现水平扩展和顺序性保证</li>
+<li>通过可容错的state store实现高效的状态操作（如windowed join和aggregation）</li>
+<li>支持正好一次处理语义</li>
+<li>提供记录级的处理能力，从而实现毫秒级的低延迟</li>
+<li>支持基于事件时间的窗口操作，并且可处理晚到的数据（late arrival of records）</li>
+<li>同时提供底层的处理原语Processor（类似于Storm的spout和bolt），以及高层抽象的DSL（类似于Spark的map/group/reduce）</li>
+</ul>
+<h2 id="什么是流式计算"><a href="#什么是流式计算" class="headerlink" title="什么是流式计算"></a>什么是流式计算</h2><p>一般流式计算会与批量计算相比较。在流式计算模型中，输入是持续的，可以认为在时间上是无界的，也就意味着，永远拿不到全量数据去做计算。同时，计算结果是持续输出的，也即计算结果在时间上也是无界的。流式计算一般对实时性要求较高，同时一般是先定义目标计算，然后数据到来之后将计算逻辑应用于数据。同时为了提高计算效率，往往尽可能采用增量计算代替全量计算。</p>
+<div align="center"><br><img width="70%" src="//www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png" alt="Stream Processing"><br></div>
+
+<p>批量处理模型中，一般先有全量数据集，然后定义计算逻辑，并将计算应用于全量数据。特点是全量计算，并且计算结果一次性全量输出。</p>
+<div align="center"><br><img width="70%" src="//www.jasongj.com/img/kafka/KafkaColumn7/batch_procissing.png" alt="Batch Processing"><br></div>
+
+<h2 id="为什么要有Kafka-Stream"><a href="#为什么要有Kafka-Stream" class="headerlink" title="为什么要有Kafka Stream"></a>为什么要有Kafka Stream</h2><p>当前已经有非常多的流式处理系统，最知名且应用最多的开源流式处理系统有Spark Streaming和Apache Storm。Apache Storm发展多年，应用广泛，提供记录级别的处理能力，当前也支持SQL on Stream。而Spark Streaming基于Apache Spark，可以非常方便与图计算，SQL处理等集成，功能强大，对于熟悉其它Spark应用开发的用户而言使用门槛低。另外，目前主流的Hadoop发行版，如MapR，Cloudera和Hortonworks，都集成了Apache Storm和Apache Spark，使得部署更容易。</p>
+<p>既然Apache Spark与Apache Storm拥用如此多的优势，那为何还需要Kafka Stream呢？笔者认为主要有如下原因。</p>
+<p>第一，Spark和Storm都是流式处理<strong>框架</strong>，而Kafka Stream提供的是一个基于Kafka的流式处理<strong>类库</strong>。框架要求开发者按照特定的方式去开发逻辑部分，供框架调用。开发者很难了解框架的具体运行方式，从而使得调试成本高，并且使用受限。而Kafka Stream作为流式处理<strong>类库</strong>，直接提供具体的类给开发者调用，整个应用的运行方式主要由开发者控制，方便使用和调试。</p>
+<div align="center"><br><img width="60%" src="//www.jasongj.com/img/kafka/KafkaColumn7/library.png" alt="Library vs. Framework"><br></div>
+
+<p>第二，虽然Cloudera与Hortonworks方便了Storm和Spark的部署，但是这些框架的部署仍然相对复杂。而Kafka Stream作为类库，可以非常方便的嵌入应用程序中，它对应用的打包和部署基本没有任何要求。更为重要的是，Kafka Stream充分利用了<a href="http://www.jasongj.com/2015/03/10/KafkaColumn1/#Topic-amp-Partition">Kafka的分区机制</a>和<a href="//www.jasongj.com/2015/08/09/KafkaColumn4/#High-Level-Consumer-Rebalance">Consumer的Rebalance机制</a>，使得Kafka Stream可以非常方便的水平扩展，并且各个实例可以使用不同的部署方式。具体来说，每个运行Kafka Stream的应用程序实例都包含了Kafka Consumer实例，多个同一应用的实例之间并行处理数据集。而不同实例之间的部署方式并不要求一致，比如部分实例可以运行在Web容器中，部分实例可运行在Docker或Kubernetes中。</p>
+<p>第三，就流式处理系统而言，基本都支持Kafka作为数据源。例如Storm具有专门的kafka-spout，而Spark也提供专门的spark-streaming-kafka模块。事实上，Kafka基本上是主流的流式处理系统的标准数据源。换言之，大部分流式系统中都已部署了Kafka，此时使用Kafka Stream的成本非常低。</p>
+<p>第四，使用Storm或Spark Streaming时，需要为框架本身的进程预留资源，如Storm的supervisor和Spark on YARN的node manager。即使对于应用实例而言，框架本身也会占用部分资源，如Spark Streaming需要为shuffle和storage预留内存。</p>
+<p>第五，由于Kafka本身提供数据持久化，因此Kafka Stream提供滚动部署和滚动升级以及重新计算的能力。</p>
+<p>第六，由于Kafka Consumer Rebalance机制，Kafka Stream可以在线动态调整并行度。</p>
+<h1 id="Kafka-Stream架构"><a href="#Kafka-Stream架构" class="headerlink" title="Kafka Stream架构"></a>Kafka Stream架构</h1><h2 id="Kafka-Stream整体架构"><a href="#Kafka-Stream整体架构" class="headerlink" title="Kafka Stream整体架构"></a>Kafka Stream整体架构</h2><p>Kafka Stream的整体架构图如下所示。</p>
+<div align="center"><br><img width="80%" src="//www.jasongj.com/img/kafka/KafkaColumn7/Kafka%20Stream%20Architecture.png" alt="Kafka Stream Architecture"><br></div>
+
+<p>目前（Kafka 0.11.0.0）Kafka Stream的数据源只能如上图所示是Kafka。但是处理结果并不一定要如上图所示输出到Kafka。实际上KStream和Ktable的实例化都需要指定Topic。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">KStream&lt;String, String&gt; stream = builder.stream(<span class="string">"words-stream"</span>);</div><div class="line"></div><div class="line">KTable&lt;String, String&gt; table = builder.table(<span class="string">"words-table"</span>, <span class="string">"words-store"</span>);</div></pre></td></tr></table></figure></p>
+<p>另外，上图中的Consumer和Producer并不需要开发者在应用中显示实例化，而是由Kafka Stream根据参数隐式实例化和管理，从而降低了使用门槛。开发者只需要专注于开发核心业务逻辑，也即上图中Task内的部分。</p>
+<h2 id="Processor-Topology"><a href="#Processor-Topology" class="headerlink" title="Processor Topology"></a>Processor Topology</h2><p>基于Kafka Stream的流式应用的业务逻辑全部通过一个被称为Processor Topology的地方执行。它与Storm的Topology和Spark的DAG类似，都定义了数据在各个处理单元（在Kafka Stream中被称作Processor）间的流动方式，或者说定义了数据的处理逻辑。</p>
+<p>下面是一个Processor的示例，它实现了Word Count功能，并且每秒输出一次结果。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountProcessor</span> <span class="keyword">implements</span> <span class="title">Processor</span>&lt;<span class="title">String</span>, <span class="title">String</span>&gt; </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> ProcessorContext context;</div><div class="line">  <span class="keyword">private</span> KeyValueStore&lt;String, Integer&gt; kvStore;</div><div class="line"></div><div class="line">  <span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>)</div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(ProcessorContext context)</span> </span>&#123;</div><div class="line">    <span class="keyword">this</span>.context = context;</div><div class="line">    <span class="keyword">this</span>.context.schedule(<span class="number">1000</span>);</div><div class="line">    <span class="keyword">this</span>.kvStore = (KeyValueStore&lt;String, Integer&gt;) context.getStateStore(<span class="string">"Counts"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(String key, String value)</span> </span>&#123;</div><div class="line">    Stream.of(value.toLowerCase().split(<span class="string">" "</span>)).forEach((String word) -&gt; &#123;</div><div class="line">      Optional&lt;Integer&gt; counts = Optional.ofNullable(kvStore.get(word));</div><div class="line">      <span class="keyword">int</span> count = counts.map(wordcount -&gt; wordcount + <span class="number">1</span>).orElse(<span class="number">1</span>);</div><div class="line">      kvStore.put(word, count);</div><div class="line">    &#125;);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">punctuate</span><span class="params">(<span class="keyword">long</span> timestamp)</span> </span>&#123;</div><div class="line">    KeyValueIterator&lt;String, Integer&gt; iterator = <span class="keyword">this</span>.kvStore.all();</div><div class="line">    iterator.forEachRemaining(entry -&gt; &#123;</div><div class="line">      context.forward(entry.key, entry.value);</div><div class="line">      <span class="keyword">this</span>.kvStore.delete(entry.key);</div><div class="line">    &#125;);</div><div class="line">    context.commit();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">this</span>.kvStore.close();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>从上述代码中可见</p>
+<ul>
+<li><code>process</code>定义了对每条记录的处理逻辑，也印证了Kafka可具有记录级的数据处理能力。</li>
+<li>context.scheduler定义了punctuate被执行的周期，从而提供了实现窗口操作的能力。</li>
+<li>context.getStateStore提供的状态存储为有状态计算（如窗口，聚合）提供了可能。</li>
+</ul>
+<h2 id="Kafka-Stream并行模型"><a href="#Kafka-Stream并行模型" class="headerlink" title="Kafka Stream并行模型"></a>Kafka Stream并行模型</h2><p>Kafka Stream的并行模型中，最小粒度为Task，而每个Task包含一个特定子Topology的所有Processor。因此每个Task所执行的代码完全一样，唯一的不同在于所处理的数据集互补。这一点跟Storm的Topology完全不一样。Storm的Topology的每一个Task只包含一个Spout或Bolt的实例。因此Storm的一个Topology内的不同Task之间需要通过网络通信传递数据，而Kafka Stream的Task包含了完整的子Topology，所以Task之间不需要传递数据，也就不需要网络通信。这一点降低了系统复杂度，也提高了处理效率。</p>
+<p>如果某个Stream的输入Topic有多个(比如2个Topic，1个Partition数为4，另一个Partition数为3)，则总的Task数等于Partition数最多的那个Topic的Partition数（max(4,3)=4）。这是因为Kafka Stream使用了Consumer的Rebalance机制，每个Partition对应一个Task。</p>
+<p>下图展示了在一个进程（Instance）中以2个Topic（Partition数均为4）为数据源的Kafka Stream应用的并行模型。从图中可以看到，由于Kafka Stream应用的默认线程数为1，所以4个Task全部在一个线程中运行。</p>
+<div align="center"><br><img width="80%" alt="1 thread" src="//www.jasongj.com/img/kafka/KafkaColumn7/1%20thread.png"><br></div>
+
+<p>为了充分利用多线程的优势，可以设置Kafka Stream的线程数。下图展示了线程数为2时的并行模型。</p>
+<div align="center"><br><img width="80%" alt="2 threads" src="//www.jasongj.com/img/kafka/KafkaColumn7/2%20threads.png"><br></div>
+
+<p>前文有提到，Kafka Stream可被嵌入任意Java应用（理论上基于JVM的应用都可以）中，下图展示了在同一台机器的不同进程中同时启动同一Kafka Stream应用时的并行模型。注意，这里要保证两个进程的<code>StreamsConfig.APPLICATION_ID_CONFIG</code>完全一样。因为Kafka Stream将APPLICATION_ID_CONFIG作为隐式启动的Consumer的Group ID。只有保证APPLICATION_ID_CONFIG相同，才能保证这两个进程的Consumer属于同一个Group，从而可以通过Consumer Rebalance机制拿到互补的数据集。</p>
+<div align="center"><br><img width="80%" alt="2 instances" src="//www.jasongj.com/img/kafka/KafkaColumn7/2%20instances.png"><br></div>
+
+<p>既然实现了多进程部署，可以以同样的方式实现多机器部署。该部署方式也要求所有进程的APPLICATION_ID_CONFIG完全一样。从图上也可以看到，每个实例中的线程数并不要求一样。但是无论如何部署，Task总数总会保证一致。</p>
+<div align="center"><br><img width="80%" alt="2 servers" src="//www.jasongj.com/img/kafka/KafkaColumn7/2%20servers.png"><br></div>
+
+<p>注意：Kafka Stream的并行模型，非常依赖于《<a href="//www.jasongj.com/2015/03/10/KafkaColumn1">Kafka设计解析（一）- Kafka背景及架构介绍</a>》一文中介绍的<a href="http://www.jasongj.com/2015/03/10/KafkaColumn1/#Topic-amp-Partition">Kafka分区机制</a>和《<a href="//www.jasongj.com/2015/08/09/KafkaColumn4/">Kafka设计解析（四）- Kafka Consumer设计解析</a>》中介绍的<a href="//www.jasongj.com/2015/08/09/KafkaColumn4/#High-Level-Consumer-Rebalance">Consumer的Rebalance机制</a>。强烈建议不太熟悉这两种机制的朋友，先行阅读这两篇文章。</p>
+<p>这里对比一下Kafka Stream的Processor Topology与Storm的Topology。</p>
+<ul>
+<li>Storm的Topology由Spout和Bolt组成，Spout提供数据源，而Bolt提供计算和数据导出。Kafka Stream的Processor Topology完全由Processor组成，因为它的数据固定由Kafka的Topic提供。</li>
+<li>Storm的不同Bolt运行在不同的Executor中，很可能位于不同的机器，需要通过网络通信传输数据。而Kafka Stream的Processor Topology的不同Processor完全运行于同一个Task中，也就完全处于同一个线程，无需网络通信。</li>
+<li>Storm的Topology可以同时包含Shuffle部分和非Shuffle部分，并且往往一个Topology就是一个完整的应用。而Kafka Stream的一个物理Topology只包含非Shuffle部分，而Shuffle部分需要通过<code>through</code>操作显示完成，该操作将一个大的Topology分成了2个子Topology。</li>
+<li>Storm的Topology内，不同Bolt/Spout的并行度可以不一样，而Kafka Stream的子Topology内，所有Processor的并行度完全一样。</li>
+<li>Storm的一个Task只包含一个Spout或者Bolt的实例，而Kafka Stream的一个Task包含了一个子Topology的所有Processor。</li>
+</ul>
+<h2 id="KTable-vs-KStream"><a href="#KTable-vs-KStream" class="headerlink" title="KTable vs. KStream"></a>KTable vs. KStream</h2><p>KTable和KStream是Kafka Stream中非常重要的两个概念，它们是Kafka实现各种语义的基础。因此这里有必要分析下二者的区别。</p>
+<p>KStream是一个数据流，可以认为所有记录都通过Insert only的方式插入进这个数据流里。而KTable代表一个完整的数据集，可以理解为数据库中的表。由于每条记录都是Key-Value对，这里可以将Key理解为数据库中的Primary Key，而Value可以理解为一行记录。可以认为KTable中的数据都是通过Update only的方式进入的。也就意味着，如果KTable对应的Topic中新进入的数据的Key已经存在，那么从KTable只会取出同一Key对应的最后一条数据，相当于新的数据更新了旧的数据。</p>
+<p>以下图为例，假设有一个KStream和KTable，基于同一个Topic创建，并且该Topic中包含如下图所示5条数据。此时遍历KStream将得到与Topic内数据完全一样的所有5条数据，且顺序不变。而此时遍历KTable时，因为这5条记录中有3个不同的Key，所以将得到3条记录，每个Key对应最新的值，并且这三条数据之间的顺序与原来在Topic中的顺序保持一致。这一点与Kafka的日志compact相同。</p>
+<div align="center"><br><img width="60%" alt="KStream vs. KTable" src="//www.jasongj.com/img/kafka/KafkaColumn7/ktable_kstream.png"><br></div>
+
+<p>此时如果对该KStream和KTable分别基于key做Group，对Value进行Sum，得到的结果将会不同。对KStream的计算结果是<code>&lt;Jack，4&gt;</code>，<code>&lt;Lily，7&gt;</code>，<code>&lt;Mike，4&gt;</code>。而对Ktable的计算结果是<code>&lt;Mike，4&gt;</code>，<code>&lt;Jack，3&gt;</code>，<code>&lt;Lily，5&gt;</code>。</p>
+<h2 id="State-store"><a href="#State-store" class="headerlink" title="State store"></a>State store</h2><p>流式处理中，部分操作是无状态的，例如过滤操作（Kafka Stream DSL中用<code>filer</code>方法实现）。而部分操作是有状态的，需要记录中间状态，如Window操作和聚合计算。State store被用来存储中间状态。它可以是一个持久化的Key-Value存储，也可以是内存中的HashMap，或者是数据库。Kafka提供了基于Topic的状态存储。</p>
+<p>Topic中存储的数据记录本身是Key-Value形式的，同时Kafka的log compaction机制可对历史数据做compact操作，保留每个Key对应的最后一个Value，从而在保证Key不丢失的前提下，减少总数据量，从而提高查询效率。</p>
+<p>构造KTable时，需要指定其state store name。默认情况下，该名字也即用于存储该KTable的状态的Topic的名字，遍历KTable的过程，实际就是遍历它对应的state store，或者说遍历Topic的所有key，并取每个Key最新值的过程。为了使得该过程更加高效，默认情况下会对该Topic进行compact操作。</p>
+<p>另外，除了KTable，所有状态计算，都需要指定state store name，从而记录中间状态。</p>
+<h1 id="Kafka-Stream如何解决流式系统中关键问题"><a href="#Kafka-Stream如何解决流式系统中关键问题" class="headerlink" title="Kafka Stream如何解决流式系统中关键问题"></a>Kafka Stream如何解决流式系统中关键问题</h1><h2 id="时间"><a href="#时间" class="headerlink" title="时间"></a>时间</h2><p>在流式数据处理中，时间是数据的一个非常重要的属性。从Kafka 0.10开始，每条记录除了Key和Value外，还增加了<code>timestamp</code>属性。目前Kafka Stream支持三种时间</p>
+<ul>
+<li>事件发生时间。事件发生的时间，包含在数据记录中。发生时间由Producer在构造ProducerRecord时指定。并且需要Broker或者Topic将<code>message.timestamp.type</code>设置为<code>CreateTime</code>（默认值）才能生效。</li>
+<li>消息接收时间，也即消息存入Broker的时间。当Broker或Topic将<code>message.timestamp.type</code>设置为<code>LogAppendTime</code>时生效。此时Broker会在接收到消息后，存入磁盘前，将其<code>timestamp</code>属性值设置为当前机器时间。一般消息接收时间比较接近于事件发生时间，部分场景下可代替事件发生时间。</li>
+<li>消息处理时间，也即Kafka Stream处理消息时的时间。</li>
+</ul>
+<p>注：Kafka Stream允许通过实现<code>org.apache.kafka.streams.processor.TimestampExtractor</code>接口自定义记录时间。</p>
+<h2 id="窗口"><a href="#窗口" class="headerlink" title="窗口"></a>窗口</h2><p>前文提到，流式数据是在时间上无界的数据。而聚合操作只能作用在特定的数据集，也即有界的数据集上。因此需要通过某种方式从无界的数据集上按特定的语义选取出有界的数据。窗口是一种非常常用的设定计算边界的方式。不同的流式处理系统支持的窗口类似，但不尽相同。</p>
+<p>Kafka Stream支持的窗口如下。</p>
+<ol>
+<li><p><code>Hopping Time Window</code> 该窗口定义如下图所示。它有两个属性，一个是Window size，一个是Advance interval。Window size指定了窗口的大小，也即每次计算的数据集的大小。而Advance interval定义输出的时间间隔。一个典型的应用场景是，每隔5秒钟输出一次过去1个小时内网站的PV或者UV。</p>
+<div align="center"><br><img width="60%" alt="Hopping Time Window" src="//www.jasongj.com/img/kafka/KafkaColumn7/Hopping%20Time%20Window.gif"><br></div>
+</li>
+<li><p><code>Tumbling Time Window</code>该窗口定义如下图所示。可以认为它是Hopping Time Window的一种特例，也即Window size和Advance interval相等。它的特点是各个Window之间完全不相交。</p>
+<div align="center"><br><img width="60%" alt="Tumbling Time Window" src="//www.jasongj.com/img/kafka/KafkaColumn7/Tumbling Time Window.gif"><br></div>
+</li>
+<li><p><code>Sliding Window</code>该窗口只用于2个KStream进行Join计算时。该窗口的大小定义了Join两侧KStream的数据记录被认为在同一个窗口的最大时间差。假设该窗口的大小为5秒，则参与Join的2个KStream中，记录时间差小于5的记录被认为在同一个窗口中，可以进行Join计算。</p>
+</li>
+<li><p><code>Session Window</code>该窗口用于对Key做Group后的聚合操作中。它需要对Key做分组，然后对组内的数据根据业务需求定义一个窗口的起始点和结束点。一个典型的案例是，希望通过Session Window计算某个用户访问网站的时间。对于一个特定的用户（用Key表示）而言，当发生登录操作时，该用户（Key）的窗口即开始，当发生退出操作或者超时时，该用户（Key）的窗口即结束。窗口结束时，可计算该用户的访问时间或者点击次数等。</p>
+</li>
+</ol>
+<h2 id="Join"><a href="#Join" class="headerlink" title="Join"></a>Join</h2><p>Kafka Stream由于包含KStream和Ktable两种数据集，因此提供如下Join计算</p>
+<ul>
+<li><code>KTable Join KTable</code> 结果仍为KTable。任意一边有更新，结果KTable都会更新。</li>
+<li><code>KStream Join KStream</code> 结果为KStream。必须带窗口操作，否则会造成Join操作一直不结束。</li>
+<li><code>KStream Join KTable / GlobalKTable</code> 结果为KStream。只有当KStream中有新数据时，才会触发Join计算并输出结果。KStream无新数据时，KTable的更新并不会触发Join计算，也不会输出数据。并且该更新只对下次Join生效。一个典型的使用场景是，KStream中的订单信息与KTable中的用户信息做关联计算。</li>
+</ul>
+<p>对于Join操作，如果要得到正确的计算结果，需要保证参与Join的KTable或KStream中Key相同的数据被分配到同一个Task。具体方法是</p>
+<ul>
+<li>参与Join的KTable或KStream的Key类型相同（实际上，业务含意也应该相同）</li>
+<li>参与Join的KTable或KStream对应的Topic的Partition数相同</li>
+<li>Partitioner策略的最终结果等效（实现不需要完全一样，只要效果一样即可），也即Key相同的情况下，被分配到ID相同的Partition内</li>
+</ul>
+<p>如果上述条件不满足，可通过调用如下方法使得它满足上述条件。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="function">KStream&lt;K, V&gt; <span class="title">through</span><span class="params">(Serde&lt;K&gt; keySerde, Serde&lt;V&gt; valSerde, StreamPartitioner&lt;K, V&gt; partitioner, String topic)</span></span></div></pre></td></tr></table></figure></p>
+<h2 id="聚合与乱序处理"><a href="#聚合与乱序处理" class="headerlink" title="聚合与乱序处理"></a>聚合与乱序处理</h2><p>聚合操作可应用于KStream和KTable。当聚合发生在KStream上时必须指定窗口，从而限定计算的目标数据集。</p>
+<p>需要说明的是，聚合操作的结果肯定是KTable。因为KTable是可更新的，可以在晚到的数据到来时（也即发生数据乱序时）更新结果KTable。</p>
+<p>这里举例说明。假设对KStream以5秒为窗口大小，进行Tumbling Time Window上的Count操作。并且KStream先后出现时间为1秒, 3秒, 5秒的数据，此时5秒的窗口已达上限，Kafka Stream关闭该窗口，触发Count操作并将结果3输出到KTable中（假设该结果表示为<1-5,3>）。若1秒后，又收到了时间为2秒的记录，由于1-5秒的窗口已关闭，若直接抛弃该数据，则可认为之前的结果<1-5,3>不准确。而如果直接将完整的结果<1-5,4>输出到KStream中，则KStream中将会包含该窗口的2条记录，<1-5,3>, <1-5,4>，也会存在肮数据。因此Kafka Stream选择将聚合结果存于KTable中，此时新的结果<1-5,4>会替代旧的结果<1-5,3>。用户可得到完整的正确的结果。</1-5,3></1-5,4></1-5,4></1-5,3></1-5,4></1-5,3></1-5,3></p>
+<p>这种方式保证了数据准确性，同时也提高了容错性。</p>
+<p>但需要说明的是，Kafka Stream并不会对所有晚到的数据都重新计算并更新结果集，而是让用户设置一个<code>retention period</code>，将每个窗口的结果集在内存中保留一定时间，该窗口内的数据晚到时，直接合并计算，并更新结果KTable。超过<code>retention period</code>后，该窗口结果将从内存中删除，并且晚到的数据即使落入窗口，也会被直接丢弃。</p>
+<h2 id="容错"><a href="#容错" class="headerlink" title="容错"></a>容错</h2><p>Kafka Stream从如下几个方面进行容错</p>
+<ul>
+<li>高可用的Partition保证无数据丢失。每个Task计算一个Partition，而Kafka数据复制机制保证了Partition内数据的高可用性，故无数据丢失风险。同时由于数据是持久化的，即使任务失败，依然可以重新计算。</li>
+<li>状态存储实现快速故障恢复和从故障点继续处理。对于Join和聚合及窗口等有状态计算，状态存储可保存中间状态。即使发生Failover或Consumer Rebalance，仍然可以通过状态存储恢复中间状态，从而可以继续从Failover或Consumer Rebalance前的点继续计算。</li>
+<li>KTable与<code>retention period</code>提供了对乱序数据的处理能力。</li>
+</ul>
+<h1 id="Kafka-Stream应用示例"><a href="#Kafka-Stream应用示例" class="headerlink" title="Kafka Stream应用示例"></a>Kafka Stream应用示例</h1><p>下面结合一个案例来讲解如何开发Kafka Stream应用。本例完整代码可从<a href="https://github.com/habren/KafkaExample" target="_blank" rel="external">作者Github</a>获取。</p>
+<p>订单KStream（名为orderStream），底层Topic的Partition数为3，Key为用户名，Value包含用户名，商品名，订单时间，数量。用户KTable（名为userTable），底层Topic的Partition数为3，Key为用户名，Value包含性别，地址和年龄。商品KTable（名为itemTable），底层Topic的Partition数为6，Key为商品名，价格，种类和产地。现在希望计算每小时购买产地与自己所在地相同的用户总数。</p>
+<p>首先由于希望使用订单时间，而它包含在orderStream的Value中，需要通过提供一个实现TimestampExtractor接口的类从orderStream对应的Topic中抽取出订单时间。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderTimestampExtractor</span> <span class="keyword">implements</span> <span class="title">TimestampExtractor</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extract</span><span class="params">(ConsumerRecord&lt;Object, Object&gt; record)</span> </span>&#123;</div><div class="line">    <span class="keyword">if</span>(record <span class="keyword">instanceof</span> Order) &#123;</div><div class="line">      <span class="keyword">return</span> ((Order)record).getTS();</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>接着通过将orderStream与userTable进行Join，来获取订单用户所在地。由于二者对应的Topic的Partition数相同，且Key都为用户名，再假设Producer往这两个Topic写数据时所用的Partitioner实现相同，则此时上文所述Join条件满足，可直接进行Join。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">orderUserStream = orderStream</div><div class="line">    .leftJoin(userTable, </div><div class="line">         <span class="comment">// 该lamda表达式定义了如何从orderStream与userTable生成结果集的Value</span></div><div class="line">        (Order order, User user) -&gt; OrderUser.fromOrderUser(order, user), </div><div class="line">         <span class="comment">// 结果集Key序列化方式</span></div><div class="line">        Serdes.String(),</div><div class="line">         <span class="comment">// 结果集Value序列化方式</span></div><div class="line">         SerdesFactory.serdFrom(Order.class))</div><div class="line">    .filter((String userName, OrderUser orderUser) -&gt; orderUser.userAddress != <span class="keyword">null</span>)</div></pre></td></tr></table></figure></p>
+<p>从上述代码中，可以看到，Join时需要指定如何从参与Join双方的记录生成结果记录的Value。Key不需要指定，因为结果记录的Key与Join Key相同，故无须指定。Join结果存于名为orderUserStream的KStream中。</p>
+<p>接下来需要将orderUserStream与itemTable进行Join，从而获取商品产地。此时orderUserStream的Key仍为用户名，而itemTable对应的Topic的Key为产品名，并且二者的Partition数不一样，因此无法直接Join。此时需要通过through方法，对其中一方或双方进行重新分区，使得二者满足Join条件。这一过程相当于Spark的Shuffle过程和Storm的FieldGrouping。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">orderUserStrea</div><div class="line">    .through(</div><div class="line">        <span class="comment">// Key的序列化方式</span></div><div class="line">        Serdes.String(),</div><div class="line">        <span class="comment">// Value的序列化方式 </span></div><div class="line">        SerdesFactory.serdFrom(OrderUser.class), </div><div class="line">        <span class="comment">// 重新按照商品名进行分区，具体取商品名的哈希值，然后对分区数取模</span></div><div class="line">        (String key, OrderUser orderUser, <span class="keyword">int</span> numPartitions) -&gt; (orderUser.getItemName().hashCode() &amp; <span class="number">0x7FFFFFFF</span>) % numPartitions, </div><div class="line">        <span class="string">"orderuser-repartition-by-item"</span>)</div><div class="line">    .leftJoin(itemTable, (OrderUser orderUser, Item item) -&gt; OrderUserItem.fromOrderUser(orderUser, item), Serdes.String(), SerdesFactory.serdFrom(OrderUser.class))</div></pre></td></tr></table></figure></p>
+<p>从上述代码可见，through时需要指定Key的序列化器，Value的序列化器，以及分区方式和结果集所在的Topic。这里要注意，该Topic（orderuser-repartition-by-item）的Partition数必须与itemTable对应Topic的Partition数相同，并且through使用的分区方法必须与iteamTable对应Topic的分区方式一样。经过这种<code>through</code>操作，orderUserStream与itemTable满足了Join条件，可直接进行Join。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><ul>
+<li>Kafka Stream的并行模型完全基于Kafka的分区机制和Rebalance机制，实现了在线动态调整并行度</li>
+<li>同一Task包含了一个子Topology的所有Processor，使得所有处理逻辑都在同一线程内完成，避免了不必的网络通信开销，从而提高了效率。</li>
+<li><code>through</code>方法提供了类似Spark的Shuffle机制，为使用不同分区策略的数据提供了Join的可能</li>
+<li>log compact提高了基于Kafka的state store的加载效率</li>
+<li>state store为状态计算提供了可能</li>
+<li>基于offset的计算进度管理以及基于state store的中间状态管理为发生Consumer rebalance或Failover时从断点处继续处理提供了可能，并为系统容错性提供了保障</li>
+<li>KTable的引入，使得聚合计算拥用了处理乱序问题的能力</li>
+</ul>
+<h1 id="Kafka系列文章"><a href="#Kafka系列文章" class="headerlink" title="Kafka系列文章"></a>Kafka系列文章</h1><ul>
+<li><a href="//www.jasongj.com/2015/03/10/KafkaColumn1/">Kafka设计解析（一）- Kafka背景及架构介绍</a></li>
+<li><a href="//www.jasongj.com/2015/04/24/KafkaColumn2/">Kafka设计解析（二）- Kafka High Availability （上）</a></li>
+<li><a href="//www.jasongj.com/2015/06/08/KafkaColumn3/">Kafka设计解析（三）- Kafka High Availability （下）</a></li>
+<li><a href="//www.jasongj.com/2015/08/09/KafkaColumn4/">Kafka设计解析（四）- Kafka Consumer设计解析</a></li>
+<li><a href="//www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/">Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告</a></li>
+<li><a href="//www.jasongj.com/kafka/high_throughput/">Kafka设计解析（六）- Kafka高性能架构之道</a></li>
+<li><a href="//www.jasongj.com/kafka/kafka_stream/">Kafka设计解析（七）- Kafka Stream</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'kafka/kafka_stream/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/java/concurrenthashmap/" rel="next" title="Java进阶（六）从ConcurrentHashMap的演进看Java多线程核心技术">
+                <i class="fa fa-chevron-left"></i> Java进阶（六）从ConcurrentHashMap的演进看Java多线程核心技术
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/kafka/transaction/" rel="prev" title="Kafka设计解析（八）- Exactly Once语义与事务机制原理">
+                Kafka设计解析（八）- Exactly Once语义与事务机制原理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/kafka/kafka_stream/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/kafka/kafka_stream/'),
+                identifier: decodeURI('/kafka/kafka_stream/'),
+                title: 'Kafka设计解析（七）- Kafka Stream',
+                slug: 'kafka/kafka_stream/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka-Stream背景"><span class="nav-number">1.</span> <span class="nav-text">Kafka Stream背景</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kafka-Stream是什么"><span class="nav-number">1.1.</span> <span class="nav-text">Kafka Stream是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#什么是流式计算"><span class="nav-number">1.2.</span> <span class="nav-text">什么是流式计算</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么要有Kafka-Stream"><span class="nav-number">1.3.</span> <span class="nav-text">为什么要有Kafka Stream</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka-Stream架构"><span class="nav-number">2.</span> <span class="nav-text">Kafka Stream架构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kafka-Stream整体架构"><span class="nav-number">2.1.</span> <span class="nav-text">Kafka Stream整体架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Processor-Topology"><span class="nav-number">2.2.</span> <span class="nav-text">Processor Topology</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Kafka-Stream并行模型"><span class="nav-number">2.3.</span> <span class="nav-text">Kafka Stream并行模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#KTable-vs-KStream"><span class="nav-number">2.4.</span> <span class="nav-text">KTable vs. KStream</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#State-store"><span class="nav-number">2.5.</span> <span class="nav-text">State store</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka-Stream如何解决流式系统中关键问题"><span class="nav-number">3.</span> <span class="nav-text">Kafka Stream如何解决流式系统中关键问题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#时间"><span class="nav-number">3.1.</span> <span class="nav-text">时间</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#窗口"><span class="nav-number">3.2.</span> <span class="nav-text">窗口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Join"><span class="nav-number">3.3.</span> <span class="nav-text">Join</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#聚合与乱序处理"><span class="nav-number">3.4.</span> <span class="nav-text">聚合与乱序处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容错"><span class="nav-number">3.5.</span> <span class="nav-text">容错</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka-Stream应用示例"><span class="nav-number">4.</span> <span class="nav-text">Kafka Stream应用示例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka系列文章"><span class="nav-number">6.</span> <span class="nav-text">Kafka系列文章</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/kafka/kafka_stream/';
+          this.page.identifier = 'kafka/kafka_stream/';
+          this.page.title = 'kafka/kafka_stream/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

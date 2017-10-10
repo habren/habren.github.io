@@ -1,0 +1,1270 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="SQL,sql,SQL优化,sql优化,数据库,存储过程,UDF,PostgreSQL,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文介绍了存储过程的概念，优势，并结合实例讲解了存储过程在PostgreSQL中的实现，注意事项">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL优化（四） PostgreSQL存储过程">
+<meta property="og:url" content="http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文介绍了存储过程的概念，优势，并结合实例讲解了存储过程在PostgreSQL中的实现，注意事项">
+<meta property="og:image" content="http://www.jasongj.com/img/sql/SQL4/pg_udf_stored_precedure.png">
+<meta property="og:updated_time" content="2017-03-15T13:17:39.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SQL优化（四） PostgreSQL存储过程">
+<meta name="twitter:description" content="本文介绍了存储过程的概念，优势，并结合实例讲解了存储过程在PostgreSQL中的实现，注意事项">
+<meta name="twitter:image" content="http://www.jasongj.com/img/sql/SQL4/pg_udf_stored_precedure.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure/"/>
+
+
+
+
+
+  <title>
+  
+    SQL优化（四） PostgreSQL存储过程 | 技术世界 | SQL,sql,SQL优化,sql优化,数据库,存储过程,UDF,PostgreSQL,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                SQL优化（四） PostgreSQL存储过程
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2015-12-27T14:59:45+08:00">
+                2015-12-27
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-03-15T21:17:39+08:00">
+                2017-03-15
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/" itemprop="url" rel="index">
+                    <span itemprop="name">PostgreSQL</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/" itemprop="url" rel="index">
+                    <span itemprop="name">Database</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/SQL优化/" itemprop="url" rel="index">
+                    <span itemprop="name">SQL优化</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PostgreSQL/Database/SQL优化/SQL/" itemprop="url" rel="index">
+                    <span itemprop="name">SQL</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/12/27/SQL4_存储过程_Store Procedure/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/2015/12/27/SQL4_存储过程_Store Procedure/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2015/12/27/SQL4_存储过程_Store Procedure/" class="leancloud_visitors" data-flag-title="SQL优化（四） PostgreSQL存储过程">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  8,883
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文介绍了存储过程的概念，优势，并结合实例讲解了存储过程在PostgreSQL中的实现，注意事项
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure">原文链接</a>　<a href="http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure">http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure/</a></p>
+</blockquote>
+<h1 id="存储过程简介"><a href="#存储过程简介" class="headerlink" title="存储过程简介"></a>存储过程简介</h1><h2 id="什么是存储过程"><a href="#什么是存储过程" class="headerlink" title="什么是存储过程"></a>什么是存储过程</h2><p>　　百度百科是这么描述存储过程的：存储过程（Stored Procedure）是在大型数据库系统中，一组为了完成特定功能的SQL语句集，存储在数据库中，首次编译后再次调用不需要再次编译，用户通过指定存储过程的名字并给出参数（如果有）来执行它。它是数据库中的一个重要对象，任何一个设计良好的数据库应用程序都应该用到存储过程。<br>　　<br>　　维基百科是这样定义的：A stored procedure (also termed proc, storp, sproc, StoPro, StoredProc, StoreProc, sp, or SP) is a subroutine available to applications that access a relational database management system (RDMS). Such procedures are stored in the database data dictionary。</p>
+<p>　　PostgreSQL对存储过程的描述是：存储过程和用户自定义函数（UDF）是SQL和过程语句的集合，它存储于数据库服务器并能被SQL接口调用。</p>
+<p>　　总结下来存储过程有如下特性：</p>
+<ul>
+<li>存储于数据库服务器</li>
+<li>一次编译后可多次调用</li>
+<li>设计良好的数据库应用程序很可能会用到它</li>
+<li>由SQL和过程语句来定义</li>
+<li>应用程序通过SQL接口来调用</li>
+</ul>
+<h2 id="使用存储过程的优势及劣势"><a href="#使用存储过程的优势及劣势" class="headerlink" title="使用存储过程的优势及劣势"></a>使用存储过程的优势及劣势</h2><p>　　首先看看使用存储过程的优势</p>
+<ul>
+<li>减少应用与数据库服务器的通信开销，从而提升整体性能。笔者在项目中使用的存储过程，少则几十行，多则几百行甚至上千行（假设一行10个字节，一千行即相当于10KB），如果不使用存储过程而直接通过应用程序将相应SQL请求发送到数据库服务器，会增大网络通信开销。相反，使用存储过程能降低该开销，从而提升整体性能。尤其在一些BI系统中，一个页面往往要使用多个存储过程，此时存储过程降低网络通信开销的优势非常明显</li>
+<li>一次编译多次调用，提高性能。存储过程存于数据库服务器中，第一次被调用后即被编译，之后再调用时无需再次编译，直接执行，提高了性能</li>
+<li>同一套业务逻辑可被不同应用程序共用，减少了应用程序的开发复杂度，同时也保证了不同应用程序使用的一致性</li>
+<li>保护数据库元信息。如果应用程序直接使用SQL语句查询数据库，会将数据库表结构暴露给应用程序，而使用存储过程是应用程序并不知道数据库表结构</li>
+<li>更细粒度的数据库权限管理。直接从表读取数据时，对应用程序只能实现表级别的权限管理，而使用存储过程是，可在存储过程中将应用程序无权访问的数据屏蔽</li>
+<li>将业务实现与应用程序解耦。当业务需求更新时，只需更改存储过程的定义，而不需要更改应用程序</li>
+<li>可以通过其它语言并可及其它系统交互。比如可以使用PL/Java与Kafka交互，将存储过程的参数Push到Kafka或者将从Kafka获取的数据作为存储过程的结果返回给调用方</li>
+</ul>
+<p>　　当然，使用存储过程也有它的劣势</p>
+<ul>
+<li>不便于调试。尤其在做性能调优时，以PostgreSQL为例，可使用EXPLAIN ANALYZE检查SQL查询计划，从而方便的进行性能调优。而使用存储过程时，EXPLAIN ANALYZE无法显示其内部查询计划</li>
+<li>不便于移植到其它数据库。直接使用SQL时，SQL存于应用程序中，对大部分标准SQL而言，换用其它数据库并不影响应用程序的使用。而使用存储过程时，由于不同数据库的存储过程定义方式不同，支持的语言及语法不同，移植成本较高</li>
+</ul>
+<h1 id="存储过程在PostgreSQL中的使用"><a href="#存储过程在PostgreSQL中的使用" class="headerlink" title="存储过程在PostgreSQL中的使用"></a>存储过程在PostgreSQL中的使用</h1><h2 id="PostgreSQL支持的过程语言"><a href="#PostgreSQL支持的过程语言" class="headerlink" title="PostgreSQL支持的过程语言"></a>PostgreSQL支持的过程语言</h2><p>　　PostgreSQL官方支持PL/pgSQL，PL/Tcl，PL/Perl和PL/Python这几种过程语言。同时还支持一些第三方提供的过程语言，如PL/Java，PL/PHP，PL/Py，PL/R，PL/Ruby，PL/Scheme，PL/sh。</p>
+<h2 id="基于SQL的存储过程定义"><a href="#基于SQL的存储过程定义" class="headerlink" title="基于SQL的存储过程定义"></a>基于SQL的存储过程定义</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> <span class="keyword">add</span>(a <span class="built_in">INTEGER</span>, b <span class="built_in">NUMERIC</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$</div><div class="line">	<span class="keyword">SELECT</span> a+b;</div><div class="line">$$ LANGUAGE SQL;</div></pre></td></tr></table></figure>
+<p>　　调用方法<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">SELECT</span> <span class="keyword">add</span>(<span class="number">1</span>,<span class="number">2</span>);</div><div class="line"> add</div><div class="line"><span class="comment">-----</span></div><div class="line">   3</div><div class="line">(1 row)</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">add</span>(<span class="number">1</span>,<span class="number">2</span>);</div><div class="line"> add</div><div class="line"><span class="comment">-----</span></div><div class="line">   3</div><div class="line">(1 row)</div></pre></td></tr></table></figure></p>
+<p>　　上面这种方式参数列表只包含函数输入参数，不包含输出参数。下面这个例子将同时包含输入参数和输出参数<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> plus_and_minus</div><div class="line">(<span class="keyword">IN</span> a <span class="built_in">INTEGER</span>, <span class="keyword">IN</span> b <span class="built_in">NUMERIC</span>, <span class="keyword">OUT</span> c <span class="built_in">NUMERIC</span>, <span class="keyword">OUT</span> d <span class="built_in">NUMERIC</span>)</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line">	<span class="keyword">SELECT</span> a+b, a-b;</div><div class="line">$$ LANGUAGE SQL;</div></pre></td></tr></table></figure></p>
+<p>　调用方式<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">SELECT</span> plus_and_minus(<span class="number">3</span>,<span class="number">2</span>);</div><div class="line"> add_and_minute</div><div class="line"><span class="comment">----------------</span></div><div class="line"> (5,1)</div><div class="line">(1 row)</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> plus_and_minus(<span class="number">3</span>,<span class="number">2</span>);</div><div class="line"> c | d</div><div class="line"><span class="comment">---+---</span></div><div class="line"> 5 | 1</div><div class="line">(1 row)</div></pre></td></tr></table></figure></p>
+<p>　　该例中，IN代表输入参数，OUT代表输出参数。这个带输出参数的函数和之前的<code>add</code>函数并无本质区别。事实上，输出参数的最大价值在于它为函数提供了返回多个字段的途径。</p>
+<p>　　在函数定义中，可以写多个SQL语句，不一定是SELECT语句，可以是其它任意合法的SQL。但最后一条SQL必须是SELECT语句，并且该SQL的结果将作为该函数的输出结果。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> plus_and_minus</div><div class="line">(<span class="keyword">IN</span> a <span class="built_in">INTEGER</span>, <span class="keyword">IN</span> b <span class="built_in">NUMERIC</span>, <span class="keyword">OUT</span> c <span class="built_in">NUMERIC</span>, <span class="keyword">OUT</span> d <span class="built_in">NUMERIC</span>)</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line">	<span class="keyword">SELECT</span> a+b, a-b;</div><div class="line">	<span class="keyword">INSERT</span> <span class="keyword">INTO</span> <span class="keyword">test</span> <span class="keyword">VALUES</span>(<span class="string">'test1'</span>);</div><div class="line">	<span class="keyword">SELECT</span> a-b, a+b;</div><div class="line">$$ LANGUAGE SQL;</div></pre></td></tr></table></figure></p>
+<p>　　其效果如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> plus_and_minus(<span class="number">5</span>,<span class="number">3</span>);</div><div class="line"> c | d</div><div class="line"><span class="comment">---+---</span></div><div class="line"> 2 | 8</div><div class="line">(1 row)</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">test</span>;</div><div class="line">   a</div><div class="line"><span class="comment">-------</span></div><div class="line"> test1</div><div class="line">(1 row)</div></pre></td></tr></table></figure></p>
+<h2 id="基于PL-PgSQL的存储过程定义"><a href="#基于PL-PgSQL的存储过程定义" class="headerlink" title="基于PL/PgSQL的存储过程定义"></a>基于PL/PgSQL的存储过程定义</h2><p>　　PL/pgSQL是一个块结构语言。函数定义的所有文本都必须是一个块。一个块用下面的方法定义：<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">[ &lt;&lt;label&gt;&gt; ]</div><div class="line">[DECLARE</div><div class="line">	declarations]</div><div class="line">BEGIN</div><div class="line">	statements</div><div class="line">END [ label ];</div></pre></td></tr></table></figure></p>
+<ul>
+<li>中括号部分为可选部分</li>
+<li>块中的每一个declaration和每一条statement都由一个分号终止</li>
+<li>块支持嵌套，嵌套时子块的END后面必须跟一个分号，最外层的块END后可不跟分号</li>
+<li>BEGIN后面不必也不能跟分号</li>
+<li>END后跟的label名必须和块开始时的标签名一致</li>
+<li>所有关键字都不区分大小写。标识符被隐含地转换成小写字符，除非被双引号包围</li>
+<li>声明的变量在当前块及其子块中有效，子块开始前可声明并覆盖（只在子块内覆盖）外部块的同名变量</li>
+<li>变量被子块中声明的变量覆盖时，子块可以通过外部块的label访问外部块的变量</li>
+</ul>
+<p>　　声明一个变量的语法如下：<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">name [ CONSTANT ] type [ NOT NULL ] [ &#123; DEFAULT | := &#125; expression ];</div></pre></td></tr></table></figure></p>
+<p>　　使用PL/PgSQL语言的函数定义如下：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">FUNCTION</span> somefunc() <span class="keyword">RETURNS</span> <span class="built_in">integer</span> <span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">DECLARE</span></div><div class="line">	quantity <span class="built_in">integer</span> := <span class="number">30</span>;</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="comment">-- Prints 30</span></div><div class="line">	<span class="keyword">RAISE</span> <span class="keyword">NOTICE</span> <span class="string">'Quantity here is %'</span>, quantity;</div><div class="line">	quantity := 50;</div><div class="line"></div><div class="line">	<span class="comment">-- Create a subblock</span></div><div class="line">    <span class="keyword">DECLARE</span></div><div class="line">    	quantity <span class="built_in">integer</span> := <span class="number">80</span>;</div><div class="line">    <span class="keyword">BEGIN</span></div><div class="line">    	<span class="comment">-- Prints 80</span></div><div class="line">    	<span class="keyword">RAISE</span> <span class="keyword">NOTICE</span> <span class="string">'Quantity here is %'</span>, quantity;</div><div class="line">    	<span class="comment">-- Prints 50</span></div><div class="line">    	RAISE NOTICE 'Outer quantity here is %', outerblock.quantity;</div><div class="line">    <span class="keyword">END</span>;</div><div class="line"></div><div class="line">    <span class="comment">-- Prints 50</span></div><div class="line">	RAISE NOTICE 'Quantity here is %', quantity;</div><div class="line">    RETURN quantity;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE plpgsql;</div></pre></td></tr></table></figure></p>
+<h2 id="声明函数参数"><a href="#声明函数参数" class="headerlink" title="声明函数参数"></a>声明函数参数</h2><p>　　如果只指定输入参数类型，不指定参数名，则函数体里一般用$1，$n这样的标识符来使用参数。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> discount(<span class="built_in">NUMERIC</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> $<span class="number">1</span> * <span class="number">0.8</span>;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div></pre></td></tr></table></figure></p>
+<p>　　但该方法可读性不好，此时可以为$n参数声明别名，然后可以在函数体内通过别名指向该参数值。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> discount(<span class="built_in">NUMERIC</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">DECLARE</span></div><div class="line">	total <span class="keyword">ALIAS</span> <span class="keyword">FOR</span> $<span class="number">1</span>;</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> total * <span class="number">0.8</span>;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div></pre></td></tr></table></figure></p>
+<p>　　笔者认为上述方法仍然不够直观，也不够完美。幸好PostgreSQL提供另外一种更为直接的方法来声明函数参数，即在声明参数类型时同时声明相应的参数名。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> discount(total <span class="built_in">NUMERIC</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> total * <span class="number">0.8</span>;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div></pre></td></tr></table></figure></p>
+<h2 id="返回多行或多列"><a href="#返回多行或多列" class="headerlink" title="返回多行或多列"></a>返回多行或多列</h2><h3 id="使用自定义复合类型返回一行多列"><a href="#使用自定义复合类型返回一行多列" class="headerlink" title="使用自定义复合类型返回一行多列"></a>使用自定义复合类型返回一行多列</h3><p>　　PostgreSQL除了支持自带的类型外，还支持用户创建自定义类型。在这里可以自定义一个复合类型，并在函数中返回一个该复合类型的值，从而实现返回一行多列。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TYPE</span> compfoo <span class="keyword">AS</span> (col1 <span class="built_in">INTEGER</span>, col2 <span class="built_in">TEXT</span>);</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> getCompFoo</div><div class="line">(in_col1 <span class="built_in">INTEGER</span>, in_col2 <span class="built_in">TEXT</span>)</div><div class="line"><span class="keyword">RETURNS</span> compfoo</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">DECLARE</span> <span class="keyword">result</span> compfoo;</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	result.col1 := in_col1 * <span class="number">2</span>;</div><div class="line">	result.col2 := in_col2 || '_result';</div><div class="line">	RETURN result;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> getCompFoo(<span class="number">1</span>,<span class="string">'1'</span>);</div><div class="line"> col1 |   col2</div><div class="line"><span class="comment">------+----------</span></div><div class="line">    2 | 1_result</div><div class="line">(1 row)</div></pre></td></tr></table></figure></p>
+<h3 id="使用输出参数名返回一行多列"><a href="#使用输出参数名返回一行多列" class="headerlink" title="使用输出参数名返回一行多列"></a>使用输出参数名返回一行多列</h3><p>　　在声明函数时，除指定输入参数名及类型外，还可同时声明输出参数类型及参数名。此时函数可以输出一行多列。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> get2Col</div><div class="line">(<span class="keyword">IN</span> in_col1 <span class="built_in">INTEGER</span>,<span class="keyword">IN</span> in_col2 <span class="built_in">TEXT</span>,</div><div class="line"><span class="keyword">OUT</span> out_col1 <span class="built_in">INTEGER</span>, <span class="keyword">OUT</span> out_col2 <span class="built_in">TEXT</span>)</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	out_col1 := in_col1 * <span class="number">2</span>;</div><div class="line">	out_col2 := in_col2 || '_result';</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> get2Col(<span class="number">1</span>,<span class="string">'1'</span>);</div><div class="line"> out_col1 | out_col2 </div><div class="line"><span class="comment">----------+----------</span></div><div class="line">        2 | 1_result</div><div class="line">(1 row)</div></pre></td></tr></table></figure>
+<h3 id="使用SETOF返回多行记录"><a href="#使用SETOF返回多行记录" class="headerlink" title="使用SETOF返回多行记录"></a>使用SETOF返回多行记录</h3><p>　　实际项目中，存储过程经常需要返回多行记录，可以通过SETOF实现。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TYPE</span> compfoo <span class="keyword">AS</span> (col1 <span class="built_in">INTEGER</span>, col2 <span class="built_in">TEXT</span>);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> getSet(<span class="keyword">rows</span> <span class="built_in">INTEGER</span>)</div><div class="line"><span class="keyword">RETURNS</span> SETOF compfoo</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> <span class="keyword">QUERY</span> <span class="keyword">SELECT</span> i * <span class="number">2</span>, i || <span class="string">'_text'</span> </div><div class="line">	<span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="keyword">rows</span>, <span class="number">1</span>) <span class="keyword">as</span> t(i);</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> col1, col2 <span class="keyword">FROM</span> getSet(<span class="number">2</span>);</div><div class="line"> col1 |  col2</div><div class="line"><span class="comment">------+--------</span></div><div class="line">    2 | 1_text</div><div class="line">    4 | 2_text</div><div class="line">(2 rows)</div></pre></td></tr></table></figure></p>
+<p>　　本例返回的每一行记录是复合类型，该方法也可返回基本类型的结果集，即多行一列。</p>
+<h3 id="使用RETURN-TABLE返回多行多列"><a href="#使用RETURN-TABLE返回多行多列" class="headerlink" title="使用RETURN TABLE返回多行多列"></a>使用RETURN TABLE返回多行多列</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> getTable(<span class="keyword">rows</span> <span class="built_in">INTEGER</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="keyword">TABLE</span>(col1 <span class="built_in">INTEGER</span>, col2 <span class="built_in">TEXT</span>)</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> <span class="keyword">QUERY</span> <span class="keyword">SELECT</span> i * <span class="number">2</span>, i || <span class="string">'_text'</span></div><div class="line">	<span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="keyword">rows</span>, <span class="number">1</span>) <span class="keyword">as</span> t(i);</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> col1, col2 <span class="keyword">FROM</span> getTable(<span class="number">2</span>);</div><div class="line"> col1 |  col2</div><div class="line"><span class="comment">------+--------</span></div><div class="line">    2 | 1_text</div><div class="line">    4 | 2_text</div><div class="line">(2 rows)</div></pre></td></tr></table></figure>
+<p>　　此时从函数中读取字段就和从表或视图中取字段一样，可以看此种类型的函数看成是带参数的表或者视图。</p>
+<h2 id="使用EXECUTE语句执行动态命令"><a href="#使用EXECUTE语句执行动态命令" class="headerlink" title="使用EXECUTE语句执行动态命令"></a>使用EXECUTE语句执行动态命令</h2><p>　　有时在PL/pgSQL函数中需要生成动态命令，这个命令将包括他们每次执行时使用不同的表或者字符。EXECUTE语句用法如下：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">EXECUTE</span> command-<span class="keyword">string</span> [ <span class="keyword">INTO</span> [<span class="keyword">STRICT</span>] target] [<span class="keyword">USING</span> expression [, ...]];</div></pre></td></tr></table></figure></p>
+<p>　　此时PL/plSQL将不再缓存该命令的执行计划。相反，在该语句每次被执行的时候，命令都会编译一次。这也让该语句获得了对各种不同的字段甚至表进行操作的能力。<br>　　command-string包含了要执行的命令，它可以使用参数值，在命令中通过引用如$1，$2等来引用参数值。这些符号的值是指USING字句的值。这种方法对于在命令字符串中使用参数是最好的：它能避免运行时数值从文本来回转换，并且不容易产生SQL注入，而且它不需要引用或者转义。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> testExecute</div><div class="line"><span class="keyword">AS</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">	i || <span class="string">''</span> <span class="keyword">AS</span> a,</div><div class="line">	i <span class="keyword">AS</span> b</div><div class="line"><span class="keyword">FROM</span></div><div class="line">	generate_series(<span class="number">1</span>, <span class="number">10</span>, <span class="number">1</span>) <span class="keyword">AS</span> t(i);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> <span class="keyword">execute</span>(filter <span class="built_in">TEXT</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="keyword">TABLE</span> (a <span class="built_in">TEXT</span>, b <span class="built_in">INTEGER</span>)</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> <span class="keyword">QUERY</span> <span class="keyword">EXECUTE</span></div><div class="line">		<span class="string">'SELECT * FROM testExecute where a = $1'</span></div><div class="line">	<span class="keyword">USING</span> filter;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">execute</span>(<span class="string">'3'</span>);</div><div class="line"> a | b</div><div class="line"><span class="comment">---+---</span></div><div class="line"> 3 | 3</div><div class="line">(1 row)</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">execute</span>(<span class="string">'3'' or ''c''=''c'</span>);</div><div class="line"> a | b</div><div class="line"><span class="comment">---+---</span></div><div class="line">(0 rows)</div></pre></td></tr></table></figure></p>
+<p>　　当然，也可以使用字符串拼接的方式在command-string中使用参数，但会有SQL注入的风险。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> testExecute</div><div class="line"><span class="keyword">AS</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">	i || <span class="string">''</span> <span class="keyword">AS</span> a,</div><div class="line">	i <span class="keyword">AS</span> b</div><div class="line"><span class="keyword">FROM</span></div><div class="line">	generate_series(<span class="number">1</span>, <span class="number">10</span>, <span class="number">1</span>) <span class="keyword">AS</span> t(i);</div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> <span class="keyword">execute</span>(filter <span class="built_in">TEXT</span>)</div><div class="line"><span class="keyword">RETURNS</span> <span class="keyword">TABLE</span> (a <span class="built_in">TEXT</span>, b <span class="built_in">INTEGER</span>)</div><div class="line"><span class="keyword">AS</span> $$</div><div class="line"><span class="keyword">BEGIN</span></div><div class="line">	<span class="keyword">RETURN</span> <span class="keyword">QUERY</span> <span class="keyword">EXECUTE</span></div><div class="line">		<span class="string">'SELECT * FROM testExecute where b = '''</span></div><div class="line">		|| filter || <span class="string">''''</span>;</div><div class="line"><span class="keyword">END</span>;</div><div class="line">$$ LANGUAGE PLPGSQL;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">execute</span>(<span class="number">3</span>);</div><div class="line"> a | b</div><div class="line"><span class="comment">---+---</span></div><div class="line"> 3 | 3</div><div class="line">(1 row)</div><div class="line"></div><div class="line"> <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">execute</span>(<span class="string">'3'' or ''c''=''c'</span>);</div><div class="line"> a  | b</div><div class="line"><span class="comment">----+----</span></div><div class="line"> 1  |  1</div><div class="line"> 2  |  2</div><div class="line"> 3  |  3</div><div class="line"> 4  |  4</div><div class="line"> 5  |  5</div><div class="line"> 6  |  6</div><div class="line"> 7  |  7</div><div class="line"> 8  |  8</div><div class="line"> 9  |  9</div><div class="line"> 10 | 10</div><div class="line">(10 rows)</div></pre></td></tr></table></figure></p>
+<p>　　从该例中可以看出使用字符串拼接的方式在command-string中使用参数会引入SQL注入攻击的风险，而使用USING的方式则能有效避免这一风险。</p>
+<h2 id="PostgreSQL中的UDF与存储过程"><a href="#PostgreSQL中的UDF与存储过程" class="headerlink" title="PostgreSQL中的UDF与存储过程"></a>PostgreSQL中的UDF与存储过程</h2><p>　　本文中并未区分PostgreSQL中的UDF和存储过程。实际上PostgreSQL创建存储与创建UDF的方式一样，并没有专用于创建存储过程的语法，如CREATE PRECEDURE。在PostgreSQL官方文档中也暂未找到这二者的区别。倒是从一些资料中找对了它们的对比，如下表如示，仅供参考。<br><img src="http://www.jasongj.com/img/sql/SQL4/pg_udf_stored_precedure.png" alt="UDF VS. Stored Precedure"></p>
+<h2 id="多态SQL函数"><a href="#多态SQL函数" class="headerlink" title="多态SQL函数"></a>多态SQL函数</h2><p>　　SQL函数可以声明为接受多态类型（anyelement和anyarray）的参数或返回多态类型的返回值。</p>
+<ul>
+<li><p>函数参数和返回值均为多态类型。其调用方式和调用其它类型的SQL函数完全相同，只是在传递字符串类型的参数时，需要显示转换到目标类型，否则将会被视为unknown类型。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">CREATE OR REPLACE FUNCTION get_array(anyelement, anyelement)</div><div class="line">RETURNS anyarray</div><div class="line">AS $$</div><div class="line">	SELECT ARRAY[$1, $2];</div><div class="line">$$ LANGUAGE SQL;</div><div class="line"></div><div class="line">SELECT get_array(1,2), get_array('a'::text,'b'::text);</div><div class="line"> get_array | get_array </div><div class="line">-----------+-----------</div><div class="line"> &#123;1,2&#125;     | &#123;a,b&#125;</div><div class="line">(1 row)</div></pre></td></tr></table></figure>
+</li>
+<li><p>函数参数为多态类型，而返回值为基本类型</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> is_greater(anyelement, anyelement)</div><div class="line"><span class="keyword">RETURNS</span> <span class="built_in">BOOLEAN</span></div><div class="line"><span class="keyword">AS</span> $$</div><div class="line">	<span class="keyword">SELECT</span> $<span class="number">1</span> &gt; $<span class="number">2</span>;</div><div class="line">$$ LANGUAGE SQL;</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> is_greater(<span class="number">7.0</span>, <span class="number">4.5</span>);</div><div class="line"> is_greater </div><div class="line"><span class="comment">------------</span></div><div class="line"> t</div><div class="line">(1 row)</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> is_greater(<span class="number">2</span>, <span class="number">4</span>);    </div><div class="line"> is_greater </div><div class="line"><span class="comment">------------</span></div><div class="line"> f</div><div class="line">(1 row)</div></pre></td></tr></table></figure>
+</li>
+<li><p>输入输出参数均为多态类型。这种情况与第一种情况一样。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">CREATE OR REPLACE FUNCTION get_array</div><div class="line">(IN anyelement, IN anyelement, OUT anyelement, OUT anyarray)</div><div class="line">AS $$</div><div class="line">	SELECT $1, ARRAY[$1, $2];</div><div class="line">$$ LANGUAGE SQL;</div><div class="line"></div><div class="line">SELECT get_array(4,5), get_array('c'::text, 'd'::text);</div><div class="line">  get_array  |  get_array  </div><div class="line">-------------+-------------</div><div class="line"> (4,"&#123;4,5&#125;") | (c,"&#123;c,d&#125;")</div><div class="line">(1 row)</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="函数重载（Overwrite）"><a href="#函数重载（Overwrite）" class="headerlink" title="函数重载（Overwrite）"></a>函数重载（Overwrite）</h2><p>　　在PostgreSQL中，多个函数可共用同一个函数名，但它们的参数必须得不同。这一规则与面向对象语言（比如Java）中的函数重载类似。也正因如此，在PostgreSQL删除函数时，必须指定其参数列表，如：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">DROP</span> <span class="keyword">FUNCTION</span> get_array(anyelement, anyelement);</div></pre></td></tr></table></figure></p>
+<p>　　另外，在实际项目中，经常会用到CREATE OR REPLACE FUNCTION去替换已有的函数实现。如果同名函数已存在，但输入参数列表不同，会创建同名的函数，也即重载。如果同名函数已存在，且输入输出参数列表均相同，则替换。如果已有的函数输入参数列表相同，但输出参数列表不同，则会报错，并提示需要先DROP已有的函数定义。</p>
+<h1 id="SQL优化系列"><a href="#SQL优化系列" class="headerlink" title="SQL优化系列"></a>SQL优化系列</h1><ul>
+<li><a href="http://www.jasongj.com/2015/03/07/Join1/">SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop</a></li>
+<li><a href="http://www.jasongj.com/2015/03/15/count_distinct/">SQL优化（二） 快速计算Distinct Count</a></li>
+<li><a href="http://www.jasongj.com/2015/12/13/SQL3_partition/">SQL优化（三） PostgreSQL Table Partitioning</a></li>
+<li><a href="http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/">SQL优化（四） Postgre Sql存储过程</a></li>
+<li><a href="http://www.jasongj.com/sql/cte/">SQL优化（五） PostgreSQL （递归）CTE 通用表表达式</a>
+　　</li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: '2015/12/27/SQL4_存储过程_Store Procedure/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          
+            <a href="/tags/Database/" rel="tag"># Database</a>
+          
+            <a href="/tags/SQL优化/" rel="tag"># SQL优化</a>
+          
+            <a href="/tags/SQL/" rel="tag"># SQL</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/12/13/SQL3_partition/" rel="next" title="SQL优化（三） PostgreSQL Table Partitioning">
+                <i class="fa fa-chevron-left"></i> SQL优化（三） PostgreSQL Table Partitioning
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/12/31/KafkaColumn5_kafka_benchmark/" rel="prev" title="Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告">
+                Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/2015/12/27/SQL4_存储过程_Store Procedure/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/2015/12/27/SQL4_存储过程_Store Procedure/'),
+                identifier: decodeURI('/2015/12/27/SQL4_存储过程_Store Procedure/'),
+                title: 'SQL优化（四） PostgreSQL存储过程',
+                slug: '2015/12/27/SQL4_存储过程_Store Procedure/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#存储过程简介"><span class="nav-number">1.</span> <span class="nav-text">存储过程简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#什么是存储过程"><span class="nav-number">1.1.</span> <span class="nav-text">什么是存储过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用存储过程的优势及劣势"><span class="nav-number">1.2.</span> <span class="nav-text">使用存储过程的优势及劣势</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#存储过程在PostgreSQL中的使用"><span class="nav-number">2.</span> <span class="nav-text">存储过程在PostgreSQL中的使用</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL支持的过程语言"><span class="nav-number">2.1.</span> <span class="nav-text">PostgreSQL支持的过程语言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于SQL的存储过程定义"><span class="nav-number">2.2.</span> <span class="nav-text">基于SQL的存储过程定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于PL-PgSQL的存储过程定义"><span class="nav-number">2.3.</span> <span class="nav-text">基于PL/PgSQL的存储过程定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#声明函数参数"><span class="nav-number">2.4.</span> <span class="nav-text">声明函数参数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#返回多行或多列"><span class="nav-number">2.5.</span> <span class="nav-text">返回多行或多列</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#使用自定义复合类型返回一行多列"><span class="nav-number">2.5.1.</span> <span class="nav-text">使用自定义复合类型返回一行多列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用输出参数名返回一行多列"><span class="nav-number">2.5.2.</span> <span class="nav-text">使用输出参数名返回一行多列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用SETOF返回多行记录"><span class="nav-number">2.5.3.</span> <span class="nav-text">使用SETOF返回多行记录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用RETURN-TABLE返回多行多列"><span class="nav-number">2.5.4.</span> <span class="nav-text">使用RETURN TABLE返回多行多列</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用EXECUTE语句执行动态命令"><span class="nav-number">2.6.</span> <span class="nav-text">使用EXECUTE语句执行动态命令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL中的UDF与存储过程"><span class="nav-number">2.7.</span> <span class="nav-text">PostgreSQL中的UDF与存储过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#多态SQL函数"><span class="nav-number">2.8.</span> <span class="nav-text">多态SQL函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#函数重载（Overwrite）"><span class="nav-number">2.9.</span> <span class="nav-text">函数重载（Overwrite）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SQL优化系列"><span class="nav-number">3.</span> <span class="nav-text">SQL优化系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/2015/12/27/SQL4_存储过程_Store Procedure/';
+          this.page.identifier = '2015/12/27/SQL4_存储过程_Store Procedure/';
+          this.page.title = '2015/12/27/SQL4_存储过程_Store Procedure/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

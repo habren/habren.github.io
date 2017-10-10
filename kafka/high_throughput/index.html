@@ -1,0 +1,1297 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,大数据架构,kafka 性能,kafka 吞吐,技术世界,零拷贝" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka设计解析（六）- Kafka高性能架构之道">
+<meta property="og:url" content="http://www.jasongj.com/kafka/high_throughput/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-consumer.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-replication.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka_IO.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/BIO.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/NIO.png">
+<meta property="og:updated_time" content="2017-11-12T02:52:40.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kafka设计解析（六）- Kafka高性能架构之道">
+<meta name="twitter:description" content="本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-consumer.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/kafka/high_throughput/"/>
+
+
+
+
+
+  <title>
+  
+    Kafka高性能架构之道 | 技术世界 | kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,大数据架构,kafka 性能,kafka 吞吐,技术世界,零拷贝
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/kafka/high_throughput/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kafka设计解析（六）- Kafka高性能架构之道
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-17T09:53:13+08:00">
+                2017-04-17
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-11-12T10:52:40+08:00">
+                2017-11-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big data</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/大数据/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/kafka/high_throughput/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/kafka/high_throughput/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/kafka/high_throughput/" class="leancloud_visitors" data-flag-title="Kafka设计解析（六）- Kafka高性能架构之道">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  7,086
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/kafka/high_throughput/">原文链接</a>　<a href="http://www.jasongj.com/kafka/high_throughput/">http://www.jasongj.com/kafka/high_throughput/</a></p>
+</blockquote>
+<h1 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h1><p>上一篇文章《<a href="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/">Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告</a>》从测试角度说明了Kafka的性能。本文从宏观架构层面和具体实现层面分析了Kafka如何实现高性能。</p>
+<h1 id="宏观架构层面"><a href="#宏观架构层面" class="headerlink" title="宏观架构层面"></a>宏观架构层面</h1><h2 id="利用Partition实现并行处理"><a href="#利用Partition实现并行处理" class="headerlink" title="利用Partition实现并行处理"></a>利用Partition实现并行处理</h2><h3 id="Partition提供并行处理的能力"><a href="#Partition提供并行处理的能力" class="headerlink" title="Partition提供并行处理的能力"></a>Partition提供并行处理的能力</h3><p>Kafka是一个Pub-Sub的消息系统，无论是发布还是订阅，都须指定Topic。如《<a href="http://www.jasongj.com/2015/03/10/KafkaColumn1">Kafka设计解析（一）- Kafka背景及架构介绍</a>》一文所述，Topic只是一个逻辑的概念。每个Topic都包含一个或多个Partition，不同Partition可位于不同节点。同时Partition在物理上对应一个本地文件夹，每个Partition包含一个或多个Segment，每个Segment包含一个数据文件和一个与之对应的索引文件。在逻辑上，可以把一个Partition当作一个非常长的数组，可通过这个“数组”的索引（offset）去访问其数据。  </p>
+<p>一方面，由于不同Partition可位于不同机器，因此可以充分利用集群优势，实现机器间的并行处理。另一方面，由于Partition在物理上对应一个文件夹，即使多个Partition位于同一个节点，也可通过配置让同一节点上的不同Partition置于不同的disk drive上，从而实现磁盘间的并行处理，充分发挥多磁盘的优势。  </p>
+<p>利用多磁盘的具体方法是，将不同磁盘mount到不同目录，然后在server.properties中，将<code>log.dirs</code>设置为多目录（用逗号分隔）。Kafka会自动将所有Partition尽可能均匀分配到不同目录也即不同目录（也即不同disk）上。  </p>
+<p>注：虽然物理上最小单位是Segment，但Kafka并不提供同一Partition内不同Segment间的并行处理。因为对于写而言，每次只会写Partition内的一个Segment，而对于读而言，也只会顺序读取同一Partition内的不同Segment。  </p>
+<h3 id="Partition是最小并发粒度"><a href="#Partition是最小并发粒度" class="headerlink" title="Partition是最小并发粒度"></a>Partition是最小并发粒度</h3><p>如同《<a href="http://www.jasongj.com/2015/08/09/KafkaColumn4">Kafka设计解析（四）- Kafka Consumer设计解析</a>》一文所述，多Consumer消费同一个Topic时，同一条消息只会被同一Consumer Group内的一个Consumer所消费。而数据并非按消息为单位分配，而是以Partition为单位分配，也即同一个Partition的数据只会被一个Consumer所消费（在不考虑Rebalance的前提下）。  </p>
+<p>如果Consumer的个数多于Partition的个数，那么会有部分Consumer无法消费该Topic的任何数据，也即当Consumer个数超过Partition后，增加Consumer并不能增加并行度。  </p>
+<p>简而言之，Partition个数决定了可能的最大并行度。如下图所示，由于Topic 2只包含3个Partition，故group2中的Consumer 3、Consumer 4、Consumer 5 可分别消费1个Partition的数据，而Consumer 6消费不到Topic 2的任何数据。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-consumer.png" alt="Kafka Consumer"></p>
+<p>以Spark消费Kafka数据为例，如果所消费的Topic的Partition数为N，则有效的Spark最大并行度也为N。即使将Spark的Executor数设置为N+M，最多也只有N个Executor可同时处理该Topic的数据。</p>
+<h2 id="ISR实现可用性与数据一致性的动态平衡"><a href="#ISR实现可用性与数据一致性的动态平衡" class="headerlink" title="ISR实现可用性与数据一致性的动态平衡"></a>ISR实现可用性与数据一致性的动态平衡</h2><h3 id="CAP理论"><a href="#CAP理论" class="headerlink" title="CAP理论"></a>CAP理论</h3><p>CAP理论是指，分布式系统中，一致性、可用性和分区容忍性最多只能同时满足两个。  </p>
+<p><strong><em>一致性</em></strong>  </p>
+<ul>
+<li>通过某个节点的写操作结果对后面通过其它节点的读操作可见</li>
+<li>如果更新数据后，并发访问情况下后续读操作可立即感知该更新，称为强一致性</li>
+<li>如果允许之后部分或者全部感知不到该更新，称为弱一致性</li>
+<li>若在之后的一段时间（通常该时间不固定）后，一定可以感知到该更新，称为最终一致性</li>
+</ul>
+<p><strong><em>可用性</em></strong>  </p>
+<ul>
+<li>任何一个没有发生故障的节点必须在有限的时间内返回合理的结果</li>
+</ul>
+<p><strong><em>分区容忍性</em></strong></p>
+<ul>
+<li>部分节点宕机或者无法与其它节点通信时，各分区间还可保持分布式系统的功能</li>
+</ul>
+<p>一般而言，都要求保证分区容忍性。所以在CAP理论下，更多的是需要在可用性和一致性之间做权衡。</p>
+<h3 id="常用数据复制及一致性方案"><a href="#常用数据复制及一致性方案" class="headerlink" title="常用数据复制及一致性方案"></a>常用数据复制及一致性方案</h3><p><strong><em>Master-Slave</em></strong></p>
+<ul>
+<li>RDBMS的读写分离即为典型的Master-Slave方案</li>
+<li>同步复制可保证强一致性但会影响可用性</li>
+<li>异步复制可提供高可用性但会降低一致性</li>
+</ul>
+<p><strong><em>WNR</em></strong></p>
+<ul>
+<li>主要用于去中心化的分布式系统中。DynamoDB与Cassandra即采用此方案或其变种</li>
+<li>N代表总副本数，W代表每次写操作要保证的最少写成功的副本数，R代表每次读至少要读取的副本数</li>
+<li>当W+R&gt;N时，可保证每次读取的数据至少有一个副本拥有最新的数据</li>
+<li>多个写操作的顺序难以保证，可能导致多副本间的写操作顺序不一致。Dynamo通过向量时钟保证最终一致性</li>
+</ul>
+<p><strong><em>Paxos及其变种</em></strong></p>
+<ul>
+<li>Google的Chubby，Zookeeper的原子广播协议（Zab），RAFT等</li>
+</ul>
+<p><strong><em>基于ISR的数据复制方案</em></strong><br>如《<a href="http://www.jasongj.com/2015/04/24/KafkaColumn2/#ACK前需要保证有多少个备份"> Kafka High Availability（上）</a>》一文所述，Kafka的数据复制是以Partition为单位的。而多个备份间的数据复制，通过Follower向Leader拉取数据完成。从一这点来讲，Kafka的数据复制方案接近于上文所讲的Master-Slave方案。不同的是，Kafka既不是完全的同步复制，也不是完全的异步复制，而是基于ISR的动态复制方案。</p>
+<p>ISR，也即In-sync Replica。每个Partition的Leader都会维护这样一个列表，该列表中，包含了所有与之同步的Replica（包含Leader自己）。每次数据写入时，只有ISR中的所有Replica都复制完，Leader才会将其置为Commit，它才能被Consumer所消费。</p>
+<p>这种方案，与同步复制非常接近。但不同的是，这个ISR是由Leader动态维护的。如果Follower不能紧“跟上”Leader，它将被Leader从ISR中移除，待它又重新“跟上”Leader后，会被Leader再次加加ISR中。每次改变ISR后，Leader都会将最新的ISR持久化到Zookeeper中。</p>
+<p>至于如何判断某个Follower是否“跟上”Leader，不同版本的Kafka的策略稍微有些区别。</p>
+<ul>
+<li>对于0.8.*版本，如果Follower在<code>replica.lag.time.max.ms</code>时间内未向Leader发送Fetch请求（也即数据复制请求），则Leader会将其从ISR中移除。如果某Follower持续向Leader发送Fetch请求，但是它与Leader的数据差距在<code>replica.lag.max.messages</code>以上，也会被Leader从ISR中移除。</li>
+<li>从0.9.0.0版本开始，<code>replica.lag.max.messages</code>被移除，故Leader不再考虑Follower落后的消息条数。另外，Leader不仅会判断Follower是否在<code>replica.lag.time.max.ms</code>时间内向其发送Fetch请求，同时还会考虑Follower是否在该时间内与之保持同步。</li>
+<li>0.10.* 版本的策略与0.9.*版一致</li>
+</ul>
+<p>对于0.8.*版本的<code>replica.lag.max.messages</code>参数，很多读者曾留言提问，既然只有ISR中的所有Replica复制完后的消息才被认为Commit，那为何会出现Follower与Leader差距过大的情况。原因在于，Leader并不需要等到前一条消息被Commit才接收后一条消息。事实上，Leader可以按顺序接收大量消息，最新的一条消息的Offset被记为High Wartermark。而只有被ISR中所有Follower都复制过去的消息才会被Commit，Consumer只能消费被Commit的消息。由于Follower的复制是严格按顺序的，所以被Commit的消息之前的消息肯定也已经被Commit过。换句话说，High Watermark标记的是Leader所保存的最新消息的offset，而Commit Offset标记的是最新的可被消费的（已同步到ISR中的Follower）消息。而Leader对数据的接收与Follower对数据的复制是异步进行的，因此会出现Commit Offset与High Watermark存在一定差距的情况。0.8.*版本中<code>replica.lag.max.messages</code>限定了Leader允许的该差距的最大值。</p>
+<p>Kafka基于ISR的数据复制方案原理如下图所示。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-replication.png" alt="Kafka Replication"></p>
+<p>如上图所示，在第一步中，Leader A总共收到3条消息，故其high watermark为3，但由于ISR中的Follower只同步了第1条消息（m1），故只有m1被Commit，也即只有m1可被Consumer消费。此时Follower B与Leader A的差距是1，而Follower C与Leader A的差距是2，均未超过默认的<code>replica.lag.max.messages</code>，故得以保留在ISR中。在第二步中，由于旧的Leader A宕机，新的Leader B在<code>replica.lag.time.max.ms</code>时间内未收到来自A的Fetch请求，故将A从ISR中移除，此时ISR={B，C}。同时，由于此时新的Leader B中只有2条消息，并未包含m3（m3从未被任何Leader所Commit），所以m3无法被Consumer消费。第四步中，Follower A恢复正常，它先将宕机前未Commit的所有消息全部删除，然后从最后Commit过的消息的下一条消息开始追赶新的Leader B，直到它“赶上”新的Leader，才被重新加入新的ISR中。</p>
+<h3 id="使用ISR方案的原因"><a href="#使用ISR方案的原因" class="headerlink" title="使用ISR方案的原因"></a>使用ISR方案的原因</h3><ul>
+<li>由于Leader可移除不能及时与之同步的Follower，故与同步复制相比可避免最慢的Follower拖慢整体速度，也即ISR提高了系统可用性。</li>
+<li>ISR中的所有Follower都包含了所有Commit过的消息，而只有Commit过的消息才会被Consumer消费，故从Consumer的角度而言，ISR中的所有Replica都始终处于同步状态，从而与异步复制方案相比提高了数据一致性。</li>
+<li>ISR可动态调整，极限情况下，可以只包含Leader，极大提高了可容忍的宕机的Follower的数量。与<code>Majority Quorum</code>方案相比，容忍相同个数的节点失败，所要求的总节点数少了近一半。</li>
+</ul>
+<h3 id="ISR相关配置说明"><a href="#ISR相关配置说明" class="headerlink" title="ISR相关配置说明"></a>ISR相关配置说明</h3><ul>
+<li>Broker的<code>min.insync.replicas</code>参数指定了Broker所要求的ISR最小长度，默认值为1。也即极限情况下ISR可以只包含Leader。但此时如果Leader宕机，则该Partition不可用，可用性得不到保证。</li>
+<li>只有被ISR中所有Replica同步的消息才被Commit，但Producer发布数据时，Leader并不需要ISR中的所有Replica同步该数据才确认收到数据。Producer可以通过<code>acks</code>参数指定最少需要多少个Replica确认收到该消息才视为该消息发送成功。<code>acks</code>的默认值是1，即Leader收到该消息后立即告诉Producer收到该消息，此时如果在ISR中的消息复制完该消息前Leader宕机，那该条消息会丢失。而如果将该值设置为0，则Producer发送完数据后，立即认为该数据发送成功，不作任何等待，而实际上该数据可能发送失败，并且Producer的Retry机制将不生效。更推荐的做法是，将<code>acks</code>设置为<code>all</code>或者<code>-1</code>，此时只有ISR中的所有Replica都收到该数据（也即该消息被Commit），Leader才会告诉Producer该消息发送成功，从而保证不会有未知的数据丢失。</li>
+</ul>
+<h1 id="具体实现层面"><a href="#具体实现层面" class="headerlink" title="具体实现层面"></a>具体实现层面</h1><h2 id="高效使用磁盘"><a href="#高效使用磁盘" class="headerlink" title="高效使用磁盘"></a>高效使用磁盘</h2><h3 id="顺序写磁盘"><a href="#顺序写磁盘" class="headerlink" title="顺序写磁盘"></a>顺序写磁盘</h3><p>根据《<a href="http://deliveryimages.acm.org/10.1145/1570000/1563874/jacobs3.jpg" title="一些场景下顺序写磁盘快于随机写内存" target="_blank" rel="external nofollow">一些场景下顺序写磁盘快于随机写内存</a>》所述，将写磁盘的过程变为顺序写，可极大提高对磁盘的利用率。</p>
+<p>Kafka的整个设计中，Partition相当于一个非常长的数组，而Broker接收到的所有消息顺序写入这个大数组中。同时Consumer通过Offset顺序消费这些数据，并且不删除已经消费的数据，从而避免了随机写磁盘的过程。</p>
+<p>由于磁盘有限，不可能保存所有数据，实际上作为消息系统Kafka也没必要保存所有数据，需要删除旧的数据。而这个删除过程，并非通过使用“读-写”模式去修改文件，而是将Partition分为多个Segment，每个Segment对应一个物理文件，通过删除整个文件的方式去删除Partition内的数据。这种方式清除旧数据的方式，也避免了对文件的随机写操作。</p>
+<p>通过如下代码可知，Kafka删除Segment的方式，是直接删除Segment对应的整个log文件和整个index文件而非删除文件中的部分内容。<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * Delete this log segment from the filesystem.</div><div class="line"> *</div><div class="line"> * @throws KafkaStorageException if the delete fails.</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span></span>() &#123;</div><div class="line">  <span class="keyword">val</span> deletedLog = log.delete()</div><div class="line">  <span class="keyword">val</span> deletedIndex = index.delete()</div><div class="line">  <span class="keyword">val</span> deletedTimeIndex = timeIndex.delete()</div><div class="line">  <span class="keyword">if</span>(!deletedLog &amp;&amp; log.file.exists)</div><div class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of log "</span> + log.file.getName + <span class="string">" failed."</span>)</div><div class="line">  <span class="keyword">if</span>(!deletedIndex &amp;&amp; index.file.exists)</div><div class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of index "</span> + index.file.getName + <span class="string">" failed."</span>)</div><div class="line">  <span class="keyword">if</span>(!deletedTimeIndex &amp;&amp; timeIndex.file.exists)</div><div class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of time index "</span> + timeIndex.file.getName + <span class="string">" failed."</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h3 id="充分利用Page-Cache"><a href="#充分利用Page-Cache" class="headerlink" title="充分利用Page Cache"></a>充分利用Page Cache</h3><p>使用Page Cache的好处如下</p>
+<ul>
+<li>I/O Scheduler会将连续的小块写组装成大块的物理写从而提高性能</li>
+<li>I/O Scheduler会尝试将一些写操作重新按顺序排好，从而减少磁盘头的移动时间</li>
+<li>充分利用所有空闲内存（非JVM内存）。如果使用应用层Cache（即JVM堆内存），会增加GC负担</li>
+<li>读操作可直接在Page Cache内进行。如果消费和生产速度相当，甚至不需要通过物理磁盘（直接通过Page Cache）交换数据</li>
+<li>如果进程重启，JVM内的Cache会失效，但Page Cache仍然可用</li>
+</ul>
+<p>Broker收到数据后，写磁盘时只是将数据写入Page Cache，并不保证数据一定完全写入磁盘。从这一点看，可能会造成机器宕机时，Page Cache内的数据未写入磁盘从而造成数据丢失。但是这种丢失只发生在机器断电等造成操作系统不工作的场景，而这种场景完全可以由Kafka层面的Replication机制去解决。如果为了保证这种情况下数据不丢失而强制将Page Cache中的数据Flush到磁盘，反而会降低性能。也正因如此，Kafka虽然提供了<code>flush.messages</code>和<code>flush.ms</code>两个参数将Page Cache中的数据强制Flush到磁盘，但是Kafka并不建议使用。</p>
+<p>如果数据消费速度与生产速度相当，甚至不需要通过物理磁盘交换数据，而是直接通过Page Cache交换数据。同时，Follower从Leader Fetch数据时，也可通过Page Cache完成。下图为某Partition的Leader节点的网络/磁盘读写信息。</p>
+<p><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka_IO.png" alt="Kafka I/O page cache"></p>
+<p>从上图可以看到，该Broker每秒通过网络从Producer接收约35MB数据，虽然有Follower从该Broker Fetch数据，但是该Broker基本无读磁盘。这是因为该Broker直接从Page Cache中将数据取出返回给了Follower。</p>
+<h3 id="支持多Disk-Drive"><a href="#支持多Disk-Drive" class="headerlink" title="支持多Disk Drive"></a>支持多Disk Drive</h3><p>Broker的<code>log.dirs</code>配置项，允许配置多个文件夹。如果机器上有多个Disk Drive，可将不同的Disk挂载到不同的目录，然后将这些目录都配置到<code>log.dirs</code>里。Kafka会尽可能将不同的Partition分配到不同的目录，也即不同的Disk上，从而充分利用了多Disk的优势。</p>
+<h2 id="零拷贝"><a href="#零拷贝" class="headerlink" title="零拷贝"></a>零拷贝</h2><p>Kafka中存在大量的网络数据持久化到磁盘（Producer到Broker）和磁盘文件通过网络发送（Broker到Consumer）的过程。这一过程的性能直接影响Kafka的整体吞吐量。  </p>
+<h3 id="传统模式下的四次拷贝与四次上下文切换"><a href="#传统模式下的四次拷贝与四次上下文切换" class="headerlink" title="传统模式下的四次拷贝与四次上下文切换"></a>传统模式下的四次拷贝与四次上下文切换</h3><p>以将磁盘文件通过网络发送为例。传统模式下，一般使用如下伪代码所示的方法先将文件数据读入内存，然后通过Socket将内存中的数据发送出去。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">buffer = File.read</div><div class="line">Socket.send(buffer)</div></pre></td></tr></table></figure></p>
+<p>这一过程实际上发生了四次数据拷贝。首先通过系统调用将文件数据读入到内核态Buffer（DMA拷贝），然后应用程序将内存态Buffer数据读入到用户态Buffer（CPU拷贝），接着用户程序通过Socket发送数据时将用户态Buffer数据拷贝到内核态Buffer（CPU拷贝），最后通过DMA拷贝将数据拷贝到NIC Buffer。同时，还伴随着四次上下文切换，如下图所示。  </p>
+<p><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/BIO.png" alt="BIO 四次拷贝 四次上下文切换"> </p>
+<h3 id="sendfile和transferTo实现零拷贝"><a href="#sendfile和transferTo实现零拷贝" class="headerlink" title="sendfile和transferTo实现零拷贝"></a>sendfile和transferTo实现零拷贝</h3><p>Linux 2.4+内核通过<code>sendfile</code>系统调用，提供了零拷贝。数据通过DMA拷贝到内核态Buffer后，直接通过DMA拷贝到NIC Buffer，无需CPU拷贝。这也是零拷贝这一说法的来源。除了减少数据拷贝外，因为整个读文件-网络发送由一个<code>sendfile</code>调用完成，整个过程只有两次上下文切换，因此大大提高了性能。零拷贝过程如下图所示。</p>
+<p><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/NIO.png" alt="BIO 零拷贝 两次上下文切换"> </p>
+<p>从具体实现来看，Kafka的数据传输通过TransportLayer来完成，其子类<code>PlaintextTransportLayer</code>通过<a href="http://www.jasongj.com/java/nio_reactor/">Java NIO</a>的FileChannel的<code>transferTo</code>和<code>transferFrom</code>方法实现零拷贝，如下所示。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="meta">@Override</span></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">transferFrom</span><span class="params">(FileChannel fileChannel, <span class="keyword">long</span> position, <span class="keyword">long</span> count)</span> <span class="keyword">throws</span> IOException </span>&#123;</div><div class="line">    <span class="keyword">return</span> fileChannel.transferTo(position, count, socketChannel);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p><strong>注：</strong> <code>transferTo</code>和<code>transferFrom</code>并不保证一定能使用零拷贝。实际上是否能使用零拷贝与操作系统相关，如果操作系统提供<code>sendfile</code>这样的零拷贝系统调用，则这两个方法会通过这样的系统调用充分利用零拷贝的优势，否则并不能通过这两个方法本身实现零拷贝。</p>
+<h2 id="减少网络开销"><a href="#减少网络开销" class="headerlink" title="减少网络开销"></a>减少网络开销</h2><h3 id="批处理"><a href="#批处理" class="headerlink" title="批处理"></a>批处理</h3><p>批处理是一种常用的用于提高I/O性能的方式。对Kafka而言，批处理既减少了网络传输的Overhead，又提高了写磁盘的效率。</p>
+<p>Kafka 0.8.1及以前的Producer区分同步Producer和异步Producer。同步Producer的send方法主要分两种形式。一种是接受一个KeyedMessage作为参数，一次发送一条消息。另一种是接受一批KeyedMessage作为参数，一次性发送多条消息。而对于异步发送而言，无论是使用哪个send方法，实现上都不会立即将消息发送给Broker，而是先存到内部的队列中，直到消息条数达到阈值或者达到指定的Timeout才真正的将消息发送出去，从而实现了消息的批量发送。</p>
+<p>Kafka 0.8.2开始支持新的Producer API，将同步Producer和异步Producer结合。虽然从send接口来看，一次只能发送一个ProducerRecord，而不能像之前版本的send方法一样接受消息列表，但是send方法并非立即将消息发送出去，而是通过<code>batch.size</code>和<code>linger.ms</code>控制实际发送频率，从而实现批量发送。</p>
+<p>由于每次网络传输，除了传输消息本身以外，还要传输非常多的网络协议本身的一些内容（称为Overhead），所以将多条消息合并到一起传输，可有效减少网络传输的Overhead，进而提高了传输效率。  </p>
+<p>从<a href="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka_IO.png">零拷贝章节的图</a>中可以看到，虽然Broker持续从网络接收数据，但是写磁盘并非每秒都在发生，而是间隔一段时间写一次磁盘，并且每次写磁盘的数据量都非常大（最高达到718MB/S）。</p>
+<h3 id="数据压缩降低网络负载"><a href="#数据压缩降低网络负载" class="headerlink" title="数据压缩降低网络负载"></a>数据压缩降低网络负载</h3><p>Kafka从0.7开始，即支持将数据压缩后再传输给Broker。除了可以将每条消息单独压缩然后传输外，Kafka还支持在批量发送时，将整个Batch的消息一起压缩后传输。数据压缩的一个基本原理是，重复数据越多压缩效果越好。因此将整个Batch的数据一起压缩能更大幅度减小数据量，从而更大程度提高网络传输效率。</p>
+<p>Broker接收消息后，并不直接解压缩，而是直接将消息以压缩后的形式持久化到磁盘。Consumer Fetch到数据后再解压缩。因此Kafka的压缩不仅减少了Producer到Broker的网络传输负载，同时也降低了Broker磁盘操作的负载，也降低了Consumer与Broker间的网络传输量，从而极大得提高了传输效率，提高了吞吐量。</p>
+<h3 id="高效的序列化方式"><a href="#高效的序列化方式" class="headerlink" title="高效的序列化方式"></a>高效的序列化方式</h3><p>Kafka消息的Key和Payload（或者说Value）的类型可自定义，只需同时提供相应的序列化器和反序列化器即可。因此用户可以通过使用快速且紧凑的序列化-反序列化方式（如Avro，Protocal Buffer）来减少实际网络传输和磁盘存储的数据规模，从而提高吞吐率。这里要注意，如果使用的序列化方法太慢，即使压缩比非常高，最终的效率也不一定高。</p>
+<h1 id="Kafka系列文章"><a href="#Kafka系列文章" class="headerlink" title="Kafka系列文章"></a>Kafka系列文章</h1><ul>
+<li><a href="http://www.jasongj.com/2015/03/10/KafkaColumn1/">Kafka设计解析（一）- Kafka背景及架构介绍</a></li>
+<li><a href="http://www.jasongj.com/2015/04/24/KafkaColumn2/">Kafka设计解析（二）- Kafka High Availability （上）</a></li>
+<li><a href="http://www.jasongj.com/2015/06/08/KafkaColumn3/">Kafka设计解析（三）- Kafka High Availability （下）</a></li>
+<li><a href="http://www.jasongj.com/2015/08/09/KafkaColumn4/">Kafka设计解析（四）- Kafka Consumer设计解析</a></li>
+<li><a href="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/">Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告</a></li>
+<li><a href="http://www.jasongj.com/kafka/high_throughput/">Kafka设计解析（六）- Kafka高性能架构之道</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'kafka/high_throughput/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/ml/classification/" rel="next" title="机器学习（二） 如何做到Kaggle排名前2%">
+                <i class="fa fa-chevron-left"></i> 机器学习（二） 如何做到Kaggle排名前2%
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/java/concurrenthashmap/" rel="prev" title="Java进阶（六）从ConcurrentHashMap的演进看Java多线程核心技术">
+                Java进阶（六）从ConcurrentHashMap的演进看Java多线程核心技术 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/kafka/high_throughput/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/kafka/high_throughput/'),
+                identifier: decodeURI('/kafka/high_throughput/'),
+                title: 'Kafka设计解析（六）- Kafka高性能架构之道',
+                slug: 'kafka/high_throughput/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#摘要"><span class="nav-number">1.</span> <span class="nav-text">摘要</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#宏观架构层面"><span class="nav-number">2.</span> <span class="nav-text">宏观架构层面</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#利用Partition实现并行处理"><span class="nav-number">2.1.</span> <span class="nav-text">利用Partition实现并行处理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Partition提供并行处理的能力"><span class="nav-number">2.1.1.</span> <span class="nav-text">Partition提供并行处理的能力</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Partition是最小并发粒度"><span class="nav-number">2.1.2.</span> <span class="nav-text">Partition是最小并发粒度</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ISR实现可用性与数据一致性的动态平衡"><span class="nav-number">2.2.</span> <span class="nav-text">ISR实现可用性与数据一致性的动态平衡</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CAP理论"><span class="nav-number">2.2.1.</span> <span class="nav-text">CAP理论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用数据复制及一致性方案"><span class="nav-number">2.2.2.</span> <span class="nav-text">常用数据复制及一致性方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用ISR方案的原因"><span class="nav-number">2.2.3.</span> <span class="nav-text">使用ISR方案的原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ISR相关配置说明"><span class="nav-number">2.2.4.</span> <span class="nav-text">ISR相关配置说明</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#具体实现层面"><span class="nav-number">3.</span> <span class="nav-text">具体实现层面</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#高效使用磁盘"><span class="nav-number">3.1.</span> <span class="nav-text">高效使用磁盘</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#顺序写磁盘"><span class="nav-number">3.1.1.</span> <span class="nav-text">顺序写磁盘</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#充分利用Page-Cache"><span class="nav-number">3.1.2.</span> <span class="nav-text">充分利用Page Cache</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#支持多Disk-Drive"><span class="nav-number">3.1.3.</span> <span class="nav-text">支持多Disk Drive</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#零拷贝"><span class="nav-number">3.2.</span> <span class="nav-text">零拷贝</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#传统模式下的四次拷贝与四次上下文切换"><span class="nav-number">3.2.1.</span> <span class="nav-text">传统模式下的四次拷贝与四次上下文切换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sendfile和transferTo实现零拷贝"><span class="nav-number">3.2.2.</span> <span class="nav-text">sendfile和transferTo实现零拷贝</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#减少网络开销"><span class="nav-number">3.3.</span> <span class="nav-text">减少网络开销</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#批处理"><span class="nav-number">3.3.1.</span> <span class="nav-text">批处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据压缩降低网络负载"><span class="nav-number">3.3.2.</span> <span class="nav-text">数据压缩降低网络负载</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#高效的序列化方式"><span class="nav-number">3.3.3.</span> <span class="nav-text">高效的序列化方式</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka系列文章"><span class="nav-number">4.</span> <span class="nav-text">Kafka系列文章</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/kafka/high_throughput/';
+          this.page.identifier = 'kafka/high_throughput/';
+          this.page.title = 'kafka/high_throughput/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

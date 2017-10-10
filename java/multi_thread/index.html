@@ -1,0 +1,1250 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="java,Java,sleep wait,synchronized 锁,await signal signalAll,信号量 Semaphore,java 多线程,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文将介绍Java多线程开发必不可少的锁和同步机制，同时介绍sleep和wait等常用的暂停线程执行的方法，并详述synchronized的几种使用方式，以及Java中的重入锁（ReentrantLock）和读写锁（ReadWriteLock），之后结合实例分析了重入锁条件变量（Condition）的使用技巧，最后介绍了信号量（Semaphore）的适用场景和使用技巧。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java进阶（三）多线程开发关键技术">
+<meta property="og:url" content="http://www.jasongj.com/java/multi_thread/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文将介绍Java多线程开发必不可少的锁和同步机制，同时介绍sleep和wait等常用的暂停线程执行的方法，并详述synchronized的几种使用方式，以及Java中的重入锁（ReentrantLock）和读写锁（ReadWriteLock），之后结合实例分析了重入锁条件变量（Condition）的使用技巧，最后介绍了信号量（Semaphore）的适用场景和使用技巧。">
+<meta property="og:updated_time" content="2017-02-15T12:31:23.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java进阶（三）多线程开发关键技术">
+<meta name="twitter:description" content="本文将介绍Java多线程开发必不可少的锁和同步机制，同时介绍sleep和wait等常用的暂停线程执行的方法，并详述synchronized的几种使用方式，以及Java中的重入锁（ReentrantLock）和读写锁（ReadWriteLock），之后结合实例分析了重入锁条件变量（Condition）的使用技巧，最后介绍了信号量（Semaphore）的适用场景和使用技巧。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/java/multi_thread/"/>
+
+
+
+
+
+  <title>
+  
+    Java多线程 sleep wait synchronized 锁 await signal 信号量 Semaphore | 技术世界 | java,Java,sleep wait,synchronized 锁,await signal signalAll,信号量 Semaphore,java 多线程,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/java/multi_thread/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Java进阶（三）多线程开发关键技术
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-06-20T06:55:29+08:00">
+                2016-06-20
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-02-15T20:31:23+08:00">
+                2017-02-15
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/java/multi_thread/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/java/multi_thread/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/java/multi_thread/" class="leancloud_visitors" data-flag-title="Java进阶（三）多线程开发关键技术">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  9,640
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文将介绍Java多线程开发必不可少的锁和同步机制，同时介绍sleep和wait等常用的暂停线程执行的方法，并详述synchronized的几种使用方式，以及Java中的重入锁（ReentrantLock）和读写锁（ReadWriteLock），之后结合实例分析了重入锁条件变量（Condition）的使用技巧，最后介绍了信号量（Semaphore）的适用场景和使用技巧。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/java/multi_thread/">原文链接</a>　<a href="http://www.jasongj.com/java/multi_thread/">http://www.jasongj.com/java/multi_thread/</a></p>
+</blockquote>
+<h1 id="sleep和wait到底什么区别"><a href="#sleep和wait到底什么区别" class="headerlink" title="sleep和wait到底什么区别"></a>sleep和wait到底什么区别</h1><p>其实这个问题应该这么问——sleep和wait有什么相同点。因为这两个方法除了都能让当前线程暂停执行完，几乎没有其它相同点。</p>
+<p>wait方法是Object类的方法，这意味着所有的Java类都可以调用该方法。sleep方法是Thread类的静态方法。</p>
+<p>wait是在当前线程持有wait对象锁的情况下，暂时放弃锁，并让出CPU资源，并积极等待其它线程调用同一对象的notify或者notifyAll方法。注意，即使只有一个线程在等待，并且有其它线程调用了notify或者notifyAll方法，等待的线程只是被激活，但是它必须得再次获得锁才能继续往下执行。换言之，即使notify被调用，但只要锁没有被释放，原等待线程因为未获得锁仍然无法继续执行。测试代码如下所示<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> java.util.Date;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Wait</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    Thread thread1 = <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      <span class="keyword">synchronized</span> (Wait.class) &#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread1 is running"</span>);</div><div class="line">          Wait.class.wait();</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread1 ended"</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">    &#125;);</div><div class="line">    thread1.start();</div><div class="line">    </div><div class="line">    Thread thread2 = <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      <span class="keyword">synchronized</span> (Wait.class) &#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread2 is running"</span>);</div><div class="line">          Wait.class.notify();</div><div class="line">          <span class="comment">// Don't use sleep method to avoid confusing</span></div><div class="line">          <span class="keyword">for</span>(<span class="keyword">long</span> i = <span class="number">0</span>; i &lt; <span class="number">200000</span>; i++) &#123;</div><div class="line">            <span class="keyword">for</span>(<span class="keyword">long</span> j = <span class="number">0</span>; j &lt; <span class="number">100000</span>; j++) &#123;&#125;</div><div class="line">          &#125;</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread2 release lock"</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">      </div><div class="line">      <span class="keyword">for</span>(<span class="keyword">long</span> i = <span class="number">0</span>; i &lt; <span class="number">200000</span>; i++) &#123;</div><div class="line">        <span class="keyword">for</span>(<span class="keyword">long</span> j = <span class="number">0</span>; j &lt; <span class="number">100000</span>; j++) &#123;&#125;</div><div class="line">      &#125;</div><div class="line">      System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread2 ended"</span>);</div><div class="line">    &#125;);</div><div class="line">    </div><div class="line">    <span class="comment">// Don't use sleep method to avoid confusing</span></div><div class="line">    <span class="keyword">for</span>(<span class="keyword">long</span> i = <span class="number">0</span>; i &lt; <span class="number">200000</span>; i++) &#123;</div><div class="line">      <span class="keyword">for</span>(<span class="keyword">long</span> j = <span class="number">0</span>; j &lt; <span class="number">100000</span>; j++) &#123;&#125;</div><div class="line">    &#125;</div><div class="line">    thread2.start();</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>执行结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">Tue Jun 14 22:51:11 CST 2016 Thread1 is running</div><div class="line">Tue Jun 14 22:51:23 CST 2016 Thread2 is running</div><div class="line">Tue Jun 14 22:51:36 CST 2016 Thread2 release lock</div><div class="line">Tue Jun 14 22:51:36 CST 2016 Thread1 ended</div><div class="line">Tue Jun 14 22:51:49 CST 2016 Thread2 ended</div></pre></td></tr></table></figure></p>
+<p>从运行结果可以看出</p>
+<ul>
+<li>thread1执行wait后，暂停执行</li>
+<li>thread2执行notify后，thread1并没有继续执行，因为此时thread2尚未释放锁，thread1因为得不到锁而不能继续执行</li>
+<li>thread2执行完synchronized语句块后释放锁，thread1得到通知并获得锁，进而继续执行</li>
+</ul>
+<p><strong>注意</strong>：wait方法需要释放锁，前提条件是它已经持有锁。所以wait和notify（或者notifyAll）方法都必须被包裹在synchronized语句块中，并且synchronized后锁的对象应该与调用wait方法的对象一样。否则抛出<strong>IllegalMonitorStateException</strong></p>
+<p>sleep方法告诉操作系统至少指定时间内不需为线程调度器为该线程分配执行时间片，并不释放锁（如果当前已经持有锁）。实际上，调用sleep方法时并不要求持有任何锁。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.test.thread;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.util.Date;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Sleep</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    Thread thread1 = <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      <span class="keyword">synchronized</span> (Sleep.class) &#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread1 is running"</span>);</div><div class="line">          Thread.sleep(<span class="number">2000</span>);</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread1 ended"</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">    &#125;);</div><div class="line">    thread1.start();</div><div class="line">    </div><div class="line">    Thread thread2 = <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      <span class="keyword">synchronized</span> (Sleep.class) &#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread2 is running"</span>);</div><div class="line">          Thread.sleep(<span class="number">2000</span>);</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">" Thread2 ended"</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">      </div><div class="line">      <span class="keyword">for</span>(<span class="keyword">long</span> i = <span class="number">0</span>; i &lt; <span class="number">200000</span>; i++) &#123;</div><div class="line">        <span class="keyword">for</span>(<span class="keyword">long</span> j = <span class="number">0</span>; j &lt; <span class="number">100000</span>; j++) &#123;&#125;</div><div class="line">      &#125;</div><div class="line">    &#125;);</div><div class="line">    </div><div class="line">    <span class="comment">// Don't use sleep method to avoid confusing</span></div><div class="line">    <span class="keyword">for</span>(<span class="keyword">long</span> i = <span class="number">0</span>; i &lt; <span class="number">200000</span>; i++) &#123;</div><div class="line">      <span class="keyword">for</span>(<span class="keyword">long</span> j = <span class="number">0</span>; j &lt; <span class="number">100000</span>; j++) &#123;&#125;</div><div class="line">    &#125;</div><div class="line">    thread2.start();</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>执行结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">Thu Jun 16 19:46:06 CST 2016 Thread1 is running</div><div class="line">Thu Jun 16 19:46:08 CST 2016 Thread1 ended</div><div class="line">Thu Jun 16 19:46:13 CST 2016 Thread2 is running</div><div class="line">Thu Jun 16 19:46:15 CST 2016 Thread2 ended</div></pre></td></tr></table></figure></p>
+<p>由于thread 1和thread 2的run方法实现都在同步块中，无论哪个线程先拿到锁，执行sleep时并不释放锁，因此其它线程无法执行。直到前面的线程sleep结束并退出同步块（释放锁），另一个线程才得到锁并执行。</p>
+<p>注意：sleep方法并不需要持有任何形式的锁，也就不需要包裹在synchronized中。  </p>
+<p>本文所有示例均基于<code>Java HotSpot(TM) 64-Bit Server VM</code>  </p>
+<p>调用sleep方法的线程，在jstack中显示的状态为<code>sleeping</code>。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">java.lang.Thread.State: TIMED_WAITING (sleeping)</div></pre></td></tr></table></figure></p>
+<p>调用wait方法的线程，在jstack中显示的状态为<code>on object monitor</code><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">java.lang.Thread.State: WAITING (on object monitor)</div></pre></td></tr></table></figure></p>
+<h1 id="synchronized几种用法"><a href="#synchronized几种用法" class="headerlink" title="synchronized几种用法"></a>synchronized几种用法</h1><p>每个Java对象都可以用做一个实现同步的互斥锁，这些锁被称为内置锁。线程进入同步代码块或方法时自动获得内置锁，退出同步代码块或方法时自动释放该内置锁。进入同步代码块或者同步方法是获得内置锁的唯一途径。</p>
+<h2 id="实例同步方法"><a href="#实例同步方法" class="headerlink" title="实例同步方法"></a>实例同步方法</h2><p>synchronized用于修饰实例方法（非静态方法）时，执行该方法需要获得的是该类实例对象的内置锁（同一个类的不同实例拥有不同的内置锁）。如果多个实例方法都被synchronized修饰，则当多个线程调用同一实例的不同同步方法（或者同一方法）时，需要竞争锁。但当调用的是不同实例的方法时，并不需要竞争锁。</p>
+<h2 id="静态同步方法"><a href="#静态同步方法" class="headerlink" title="静态同步方法"></a>静态同步方法</h2><p>synchronized用于修饰静态方法时，执行该方法需要获得的是该类的class对象的内置锁（一个类只有唯一一个class对象）。调用同一个类的不同静态同步方法时会产生锁竞争。</p>
+<h2 id="同步代码块"><a href="#同步代码块" class="headerlink" title="同步代码块"></a>同步代码块</h2><p>synchronized用于修饰代码块时，进入同步代码块需要获得synchronized关键字后面括号内的对象（可以是实例对象也可以是class对象）的内置锁。</p>
+<h2 id="synchronized使用总结"><a href="#synchronized使用总结" class="headerlink" title="synchronized使用总结"></a>synchronized使用总结</h2><p>锁的使用是为了操作临界资源的正确性，而往往一个方法中并非所有的代码都操作临界资源。换句话说，方法中的代码往往并不都需要同步。此时建议不使用同步方法，而使用同步代码块，只对操作临界资源的代码，也即需要同步的代码加锁。这样做的好处是，当一个线程在执行同步代码块时，其它线程仍然可以执行该方法内同步代码块以外的部分，充分发挥多线程并发的优势，从而相较于同步整个方法而言提升性能。</p>
+<p>释放Java内置锁的唯一方式是synchronized方法或者代码块执行结束。若某一线程在synchronized方法或代码块内发生死锁，则对应的内置锁无法释放，其它线程也无法获取该内置锁（即进入跟该内置锁相关的synchronized方法或者代码块）。</p>
+<p>使用jstack dump线程栈时，可查看到相关线程通过synchronized获取到或等待的对象，但<code>Locked ownable synchronizers</code>仍然显示为<code>None</code>。下例中，线程<code>thead-test-b</code>已获取到类型为<code>java.lang.Double</code>的对象的内置锁（monitor），且该对象的内存地址为<code>0x000000076ab95cb8</code><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">&quot;thread-test-b&quot; #11 prio=5 os_prio=31 tid=0x00007fab0190b800 nid=0x5903 runnable [0x0000700010249000]</div><div class="line">   java.lang.Thread.State: RUNNABLE</div><div class="line">        at com.jasongj.demo.TestJstack.lambda$1(TestJstack.java:27)</div><div class="line">        - locked &lt;0x000000076ab95cb8&gt; (a java.lang.Double)</div><div class="line">        at com.jasongj.demo.TestJstack$$Lambda$2/1406718218.run(Unknown Source)</div><div class="line">        at java.lang.Thread.run(Thread.java:745)</div><div class="line"></div><div class="line">   Locked ownable synchronizers:</div><div class="line">        - None</div></pre></td></tr></table></figure></p>
+<h1 id="Java中的锁"><a href="#Java中的锁" class="headerlink" title="Java中的锁"></a>Java中的锁</h1><h2 id="重入锁"><a href="#重入锁" class="headerlink" title="重入锁"></a>重入锁</h2><p>Java中的重入锁（即ReentrantLock）与Java内置锁一样，是一种排它锁。使用synchronized的地方一定可以用ReentrantLock代替。</p>
+<p>重入锁需要显示请求获取锁，并显示释放锁。为了避免获得锁后，没有释放锁，而造成其它线程无法获得锁而造成死锁，一般建议将释放锁操作放在finally块里，如下所示。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">try</span>&#123;</div><div class="line">  renentrantLock.lock();</div><div class="line">  <span class="comment">// 用户操作</span></div><div class="line">&#125; <span class="keyword">finally</span> &#123;</div><div class="line">  renentrantLock.unlock();</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>如果重入锁已经被其它线程持有，则当前线程的lock操作会被阻塞。除了<strong><em>lock()</em></strong>方法之外，重入锁（或者说锁接口）还提供了其它获取锁的方法以实现不同的效果。</p>
+<ul>
+<li><strong><em>lockInterruptibly()</em></strong> 该方法尝试获取锁，若获取成功立即返回；若获取不成功则阻塞等待。与lock方法不同的是，在阻塞期间，如果当前线程被打断（interrupt）则该方法抛出<em>InterruptedException</em>。该方法提供了一种解除死锁的途径。</li>
+<li><strong><em>tryLock()</em></strong> 该方法试图获取锁，若该锁当前可用，则该方法立即获得锁并立即返回true；若锁当前不可用，则立即返回false。该方法不会阻塞，并提供给用户对于成功获利锁与获取锁失败进行不同操作的可能性。</li>
+<li><strong><em>tryLock(long time, TimeUnit unit)</em></strong> 该方法试图获得锁，若该锁当前可用，则立即获得锁并立即返回true。若锁当前不可用，则等待相应的时间（由该方法的两个参数决定）：1）若该时间内锁可用，则获得锁，并返回true；2）若等待期间当前线程被打断，则抛出<em>InterruptedException</em>；3）若等待时间结束仍未获得锁，则返回false。</li>
+</ul>
+<p>重入锁可定义为公平锁或非公平锁，默认实现为非公平锁。</p>
+<ul>
+<li>公平锁是指多个线程获取锁被阻塞的情况下，锁变为可用时，最新申请锁的线程获得锁。可通过在重入锁（RenentrantLock）的构造方法中传入true构建公平锁，如<em>Lock lock = new RenentrantLock(true)</em></li>
+<li>非公平锁是指多个线程等待锁的情况下，锁变为可用状态时，哪个线程获得锁是随机的。synchonized相当于非公平锁。可通过在重入锁的构造方法中传入false或者使用无参构造方法构建非公平锁。</li>
+</ul>
+<p>使用jstack dump线程栈时，可查看到获取到或正在等待的锁对象，获取到该锁的线程会在<code>Locked ownable synchronizers</code>处显示该锁的对象类型及内存地址。在下例中，从<code>Locked ownable synchronizers</code>部分可看到，线程<code>thread-test-e</code>获取到公平重入锁，且该锁对象的内存地址为<code>0x000000076ae3d708</code><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">&quot;thread-test-e&quot; #17 prio=5 os_prio=31 tid=0x00007fefaa0b6800 nid=0x6403 runnable [0x0000700002939000]</div><div class="line">   java.lang.Thread.State: RUNNABLE</div><div class="line">        at com.jasongj.demo.TestJstack.lambda$4(TestJstack.java:64)</div><div class="line">        at com.jasongj.demo.TestJstack$$Lambda$5/466002798.run(Unknown Source)</div><div class="line">        at java.lang.Thread.run(Thread.java:745)</div><div class="line"></div><div class="line">   Locked ownable synchronizers:</div><div class="line">        - &lt;0x000000076af86810&gt; (a java.util.concurrent.locks.ReentrantLock$FairSync)</div></pre></td></tr></table></figure></p>
+<p>而线程<code>thread-test-f</code>由于未获取到锁，而处于<code>WAITING(parking)</code>状态，且它等待的锁正是上文线程<code>thread-test-e</code>获取的锁（内存地址<code>0x000000076af86810</code>）<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">"thread-test-f" #18 prio=5 os_prio=31 tid=0x00007fefaa9b2800 nid=0x6603 waiting on condition [0x0000700002a3c000]</div><div class="line">   java.lang.Thread.State: WAITING (parking)</div><div class="line">        at sun.misc.Unsafe.park(Native Method)</div><div class="line">        - parking to wait for  &lt;0x000000076af86810&gt; (a java.util.concurrent.locks.ReentrantLock$FairSync)</div><div class="line">        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)</div><div class="line">        at java.util.concurrent.locks.AbstractQueuedSynchronizer.parkAndCheckInterrupt(AbstractQueuedSynchronizer.java:836)</div><div class="line">        at java.util.concurrent.locks.AbstractQueuedSynchronizer.acquireQueued(AbstractQueuedSynchronizer.java:870)</div><div class="line">        at java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:1199)</div><div class="line">        at java.util.concurrent.locks.ReentrantLock$FairSync.lock(ReentrantLock.java:224)</div><div class="line">        at java.util.concurrent.locks.ReentrantLock.lock(ReentrantLock.java:285)</div><div class="line">        at com.jasongj.demo.TestJstack.lambda$5(TestJstack.java:69)</div><div class="line">        at com.jasongj.demo.TestJstack$$Lambda$6/33524623.run(Unknown Source)</div><div class="line">        at java.lang.Thread.run(Thread.java:745)</div><div class="line">   Locked ownable synchronizers:</div><div class="line">        - None</div></pre></td></tr></table></figure></p>
+<h2 id="读写锁"><a href="#读写锁" class="headerlink" title="读写锁"></a>读写锁</h2><p>如上文《<a href="http://www.jasongj.com/java/thread_safe">Java进阶（二）当我们说线程安全时，到底在说什么</a>》所述，锁可以保证原子性和可见性。而原子性更多是针对写操作而言。对于读多写少的场景，一个读操作无须阻塞其它读操作，只需要保证读和写或者写与写不同时发生即可。此时，如果使用重入锁（即排它锁），对性能影响较大。Java中的读写锁（ReadWriteLock）就是为这种读多写少的场景而创造的。</p>
+<p>实际上，ReadWriteLock接口并非继承自Lock接口，ReentrantReadWriteLock也只实现了ReadWriteLock接口而未实现Lock接口。ReadLock和WriteLock，是ReentrantReadWriteLock类的静态内部类，它们实现了Lock接口。</p>
+<p>一个<strong>ReentrantReadWriteLock</strong>实例包含一个<strong>ReentrantReadWriteLock.ReadLock</strong>实例和一个<strong>ReentrantReadWriteLock.WriteLock</strong>实例。通过<em>readLock()</em>和<em>writeLock()</em>方法可分别获得读锁实例和写锁实例，并通过Lock接口提供的获取锁方法获得对应的锁。</p>
+<p>读写锁的锁定规则如下：</p>
+<ul>
+<li>获得读锁后，其它线程可获得读锁而不能获取写锁</li>
+<li>获得写锁后，其它线程既不能获得读锁也不能获得写锁</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.test.thread;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.util.Date;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.locks.Lock;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.locks.ReadWriteLock;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.locks.ReentrantReadWriteLock;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLockDemo</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    ReadWriteLock readWriteLock = <span class="keyword">new</span> ReentrantReadWriteLock();</div><div class="line"></div><div class="line">    <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      readWriteLock.readLock().lock();</div><div class="line">      <span class="keyword">try</span> &#123;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 1 started with read lock"</span>);</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          Thread.sleep(<span class="number">2000</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">        &#125;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 1 ended"</span>);</div><div class="line">      &#125; <span class="keyword">finally</span> &#123;</div><div class="line">        readWriteLock.readLock().unlock();</div><div class="line">      &#125;</div><div class="line">    &#125;).start();</div><div class="line"></div><div class="line">    <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      readWriteLock.readLock().lock();</div><div class="line">      <span class="keyword">try</span> &#123;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 2 started with read lock"</span>);</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          Thread.sleep(<span class="number">2000</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">        &#125;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 2 ended"</span>);</div><div class="line">      &#125; <span class="keyword">finally</span> &#123;</div><div class="line">        readWriteLock.readLock().unlock();</div><div class="line">      &#125;</div><div class="line">    &#125;).start();</div><div class="line"></div><div class="line">    <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      Lock lock = readWriteLock.writeLock();</div><div class="line">      lock.lock();</div><div class="line">      <span class="keyword">try</span> &#123;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 3 started with write lock"</span>);</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          Thread.sleep(<span class="number">2000</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 3 ended"</span>);</div><div class="line">      &#125; <span class="keyword">finally</span> &#123;</div><div class="line">        lock.unlock();</div><div class="line">      &#125;</div><div class="line">    &#125;).start();</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>执行结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">Sat Jun 18 21:33:46 CST 2016  Thread 1 started with read lock</div><div class="line">Sat Jun 18 21:33:46 CST 2016  Thread 2 started with read lock</div><div class="line">Sat Jun 18 21:33:48 CST 2016  Thread 2 ended</div><div class="line">Sat Jun 18 21:33:48 CST 2016  Thread 1 ended</div><div class="line">Sat Jun 18 21:33:48 CST 2016  Thread 3 started with write lock</div><div class="line">Sat Jun 18 21:33:50 CST 2016  Thread 3 ended</div></pre></td></tr></table></figure></p>
+<p>从上面的执行结果可见，thread 1和thread 2都只需获得读锁，因此它们可以并行执行。而thread 3因为需要获取写锁，必须等到thread 1和thread 2释放锁后才能获得锁。</p>
+<h1 id="条件锁"><a href="#条件锁" class="headerlink" title="条件锁"></a>条件锁</h1><p>条件锁只是一个帮助用户理解的概念，实际上并没有条件锁这种锁。对于每个重入锁，都可以通过<em>newCondition()</em>方法绑定若干个条件对象。</p>
+<p>条件对象提供以下方法以实现不同的等待语义</p>
+<ul>
+<li><strong><em>await()</em></strong> 调用该方法的前提是，当前线程已经成功获得与该条件对象绑定的重入锁，否则调用该方法时会抛出<strong>IllegalMonitorStateException</strong>。调用该方法外，当前线程会释放当前已经获得的锁（这一点与上文讲述的Java内置锁的wait方法一致），并且等待其它线程调用该条件对象的<em>signal()</em>或者<em>signalAll()</em>方法（这一点与Java内置锁wait后等待<em>notify()</em>或<em>notifyAll()</em>很像）。或者在等待期间，当前线程被打断，则<em>wait()</em>方法会抛出<strong>InterruptedException</strong>并清除当前线程的打断状态。</li>
+<li><strong><em>await(long time, TimeUnit unit)</em></strong> 适用条件和行为与<em>await()</em>基本一致，唯一不同点在于，指定时间之内没有收到<em>signal()</em>或<em>signalALL()</em>信号或者线程中断时该方法会返回false;其它情况返回true。</li>
+<li><strong><em>awaitNanos(long nanosTimeout)</em></strong> 调用该方法的前提是，当前线程已经成功获得与该条件对象绑定的重入锁，否则调用该方法时会抛出<strong>IllegalMonitorStateException</strong>。<strong>nanosTimeout</strong>指定该方法等待信号的的最大时间（单位为纳秒）。若指定时间内收到<em>signal()</em>或<em>signalALL()</em>则返回<strong>nanosTimeout</strong>减去已经等待的时间；若指定时间内有其它线程中断该线程，则抛出<strong>InterruptedException</strong>并清除当前线程的打断状态；若指定时间内未收到通知，则返回0或负数。</li>
+<li><strong><em>awaitUninterruptibly()</em></strong> 调用该方法的前提是，当前线程已经成功获得与该条件对象绑定的重入锁，否则调用该方法时会抛出<strong>IllegalMonitorStateException</strong>。调用该方法后，结束等待的唯一方法是其它线程调用该条件对象的<em>signal()</em>或<em>signalALL()</em>方法。等待过程中如果当前线程被中断，该方法仍然会继续等待，同时保留该线程的中断状态。</li>
+<li><strong><em>awaitUntil(Date deadline)</em></strong> 适用条件与行为与<strong><em>awaitNanos(long nanosTimeout)</em></strong>完全一样，唯一不同点在于它不是等待指定时间，而是等待由参数指定的某一时刻。</li>
+</ul>
+<p>调用条件等待的注意事项</p>
+<ul>
+<li>调用上述任意条件等待方法的前提都是当前线程已经获得与该条件对象对应的重入锁。</li>
+<li>调用条件等待后，当前线程让出CPU资源。</li>
+<li>上述等待方法结束后，方法返回的前提是它能重新获得与该条件对象对应的重入锁。如果无法获得锁，仍然会继续等待。这也是<strong><em>awaitNanos(long nanosTimeout)</em></strong>可能会返回负值的原因。</li>
+<li>一旦条件等待方法返回，则当前线程肯定已经获得了对应的重入锁。</li>
+<li>重入锁可以创建若干个条件对象，<em>signal()</em>和<em>signalAll()</em>方法只能唤醒相同条件对象的等待。</li>
+<li>一个重入锁上可以生成多个条件变量，不同线程可以等待不同的条件，从而实现更加细粒度的的线程间通信。</li>
+</ul>
+<p><em>signal()</em>与<em>signalAll()</em></p>
+<ul>
+<li><strong><em>signal()</em></strong> 若有一个或若干个线程在等待该条件变量，则该方法会唤醒其中的一个（具体哪一个，无法预测）。调用该方法的前提是当前线程持有该条件变量对应的锁，否则抛出<strong>IllegalMonitorStateException</strong>。</li>
+<li><strong><em>signalALL()</em></strong> 若有一个或若干个线程在等待该条件变量，则该方法会唤醒所有等待。调用该方法的前提是当前线程持有该条件变量对应的锁，否则抛出<strong>IllegalMonitorStateException</strong>。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.test.thread;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.util.Date;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.TimeUnit;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.locks.Condition;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.locks.Lock;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.locks.ReentrantLock;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConditionTest</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</div><div class="line">    Lock lock = <span class="keyword">new</span> ReentrantLock();</div><div class="line">    Condition condition = lock.newCondition();</div><div class="line">    <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      lock.lock();</div><div class="line">      <span class="keyword">try</span> &#123;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 1 is waiting"</span>);</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          <span class="keyword">long</span> waitTime = condition.awaitNanos(TimeUnit.SECONDS.toNanos(<span class="number">2</span>));</div><div class="line">          System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 1 remaining time "</span> + waitTime);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 1 is waken up"</span>);</div><div class="line">      &#125; <span class="keyword">finally</span> &#123;</div><div class="line">        lock.unlock();</div><div class="line">      &#125;</div><div class="line">    &#125;).start();</div><div class="line">    </div><div class="line">    <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">      lock.lock();</div><div class="line">      <span class="keyword">try</span>&#123;</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 2 is running"</span>);</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          Thread.sleep(<span class="number">4000</span>);</div><div class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</div><div class="line">          ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">        condition.signal();</div><div class="line">        System.out.println(<span class="keyword">new</span> Date() + <span class="string">"\tThread 2 ended"</span>);</div><div class="line">      &#125; <span class="keyword">finally</span> &#123;</div><div class="line">        lock.unlock();</div><div class="line">      &#125;</div><div class="line">    &#125;).start();</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>执行结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">Sun Jun 19 15:59:09 CST 2016  Thread 1 is waiting</div><div class="line">Sun Jun 19 15:59:09 CST 2016  Thread 2 is running</div><div class="line">Sun Jun 19 15:59:13 CST 2016  Thread 2 ended</div><div class="line">Sun Jun 19 15:59:13 CST 2016  Thread 1 remaining time -2003467560</div><div class="line">Sun Jun 19 15:59:13 CST 2016  Thread 1 is waken up</div></pre></td></tr></table></figure></p>
+<p>从执行结果可以看出，虽然thread 2一开始就调用了<em>signal()</em>方法去唤醒thread 1，但是因为thread 2在4秒钟后才释放锁，也即thread 1在4秒后才获得锁，所以thread 1的await方法在4秒钟后才返回，并且返回负值。</p>
+<h1 id="信号量Semaphore"><a href="#信号量Semaphore" class="headerlink" title="信号量Semaphore"></a>信号量Semaphore</h1><p>信号量维护一个许可集，可通过<em>acquire()</em>获取许可（若无可用许可则阻塞），通过<em>release()</em>释放许可，从而可能唤醒一个阻塞等待许可的线程。</p>
+<p>与互斥锁类似，信号量限制了同一时间访问临界资源的线程的个数，并且信号量也分公平信号量与非公平信号量。而不同的是，互斥锁保证同一时间只会有一个线程访问临界资源，而信号量可以允许同一时间多个线程访问特定资源。所以信号量并不能保证原子性。</p>
+<p>信号量的一个典型使用场景是限制系统访问量。每个请求进来后，处理之前都通过acquire获取许可，若获取许可成功则处理该请求，若获取失败则等待处理或者直接不处理该请求。</p>
+<p>信号量的使用方法</p>
+<ul>
+<li><strong><em>acquire(int permits)</em></strong> 申请<strong>permits</strong>（必须为非负数）个许可，若获取成功，则该方法返回并且当前可用许可数减permits；若当前可用许可数少于permits指定的个数，则继续等待可用许可数大于等于permits；若等待过程中当前线程被中断，则抛出<strong>InterruptedException</strong>。</li>
+<li><strong><em>acquire()</em></strong> 等价于<em>acquire(1)</em>。</li>
+<li><strong><em>acquireUninterruptibly(int permits)</em></strong> 申请<strong>permits</strong>（必须为非负数）个许可，若获取成功，则该方法返回并且当前可用许可数减permits；若当前许可数少于permits，则继续等待可用许可数大于等于permits；若等待过程中当前线程被中断，继续等待可用许可数大于等于permits，并且获取成功后设置线程中断状态。</li>
+<li><strong><em>acquireUninterruptibly()</em></strong> 等价于<em>acquireUninterruptibly(1)</em>。</li>
+<li><strong><em>drainPermits()</em></strong> 获取所有可用许可，并返回获取到的许可个数，该方法不阻塞。</li>
+<li><strong><em>tryAcquire(int permits)</em></strong> 尝试获取permits个可用许可，如果当前许可个数大于等于permits，则返回true并且可用许可数减permits；否则返回false并且可用许可数不变。</li>
+<li><strong><em>tryAcquire()</em></strong> 等价于<em>tryAcquire(1)</em>。</li>
+<li><strong><em>tryAcquire(int permits, long timeout, TimeUnit unit)</em></strong> 尝试获取permits（必须为非负数）个许可，若在指定时间内获取成功则返回true并且可用许可数减permits；若指定时间内当前线程被中断，则抛出<strong>InterruptedException</strong>；若指定时间内可用许可数均小于permits，则返回false。</li>
+<li><strong><em>tryAcquire(long timeout, TimeUnit unit)</em></strong> 等价于tryAcquire(1, long timeout, TimeUnit unit)*</li>
+<li><strong><em>release(int permits)</em></strong> 释放permits个许可，该方法不阻塞并且某线程调用release方法前并不需要先调用acquire方法。</li>
+<li><strong><em>release()</em></strong> 等价于<em>release(1)</em>。</li>
+</ul>
+<p>注意：与wait/notify和await/signal不同，acquire/release完全与锁无关，因此acquire等待过程中，可用许可满足要求时acquire可立即返回，而不用像锁的wait和条件变量的await那样重新获取锁才能返回。或者可以理解成，只要可用许可满足需求，就已经获得了锁。</p>
+<h1 id="Java进阶系列"><a href="#Java进阶系列" class="headerlink" title="Java进阶系列"></a>Java进阶系列</h1><ul>
+<li><a href="http://www.jasongj.com/2016/01/17/Java1_注解Annotation/">Java进阶（一）Annotation（注解）</a></li>
+<li><a href="http://www.jasongj.com/java/thread_safe">Java进阶（二）当我们说线程安全时，到底在说什么</a></li>
+<li><a href="http://www.jasongj.com/java/multi_thread">Java进阶（三）多线程开发关键技术</a></li>
+<li><a href="http://www.jasongj.com/java/thread_communication">Java进阶（四）线程间通信方式对比</a></li>
+<li><a href="http://www.jasongj.com/java/nio_reactor/">Java进阶（五）NIO和Reactor模式进阶</a></li>
+<li><a href="http://www.jasongj.com/java/concurrenthashmap/">Java进阶（六）从ConcurrentHashMap的演进看Java多线程核心技术</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'java/multi_thread/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/java/" rel="tag"># java</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/java/thread_safe/" rel="next" title="Java进阶（二）当我们说线程安全时，到底在说什么">
+                <i class="fa fa-chevron-left"></i> Java进阶（二）当我们说线程安全时，到底在说什么
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/java/thread_communication/" rel="prev" title="Java进阶（四）线程间通信剖析">
+                Java进阶（四）线程间通信剖析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/java/multi_thread/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/java/multi_thread/'),
+                identifier: decodeURI('/java/multi_thread/'),
+                title: 'Java进阶（三）多线程开发关键技术',
+                slug: 'java/multi_thread/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#sleep和wait到底什么区别"><span class="nav-number">1.</span> <span class="nav-text">sleep和wait到底什么区别</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#synchronized几种用法"><span class="nav-number">2.</span> <span class="nav-text">synchronized几种用法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#实例同步方法"><span class="nav-number">2.1.</span> <span class="nav-text">实例同步方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#静态同步方法"><span class="nav-number">2.2.</span> <span class="nav-text">静态同步方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#同步代码块"><span class="nav-number">2.3.</span> <span class="nav-text">同步代码块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#synchronized使用总结"><span class="nav-number">2.4.</span> <span class="nav-text">synchronized使用总结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Java中的锁"><span class="nav-number">3.</span> <span class="nav-text">Java中的锁</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#重入锁"><span class="nav-number">3.1.</span> <span class="nav-text">重入锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#读写锁"><span class="nav-number">3.2.</span> <span class="nav-text">读写锁</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#条件锁"><span class="nav-number">4.</span> <span class="nav-text">条件锁</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#信号量Semaphore"><span class="nav-number">5.</span> <span class="nav-text">信号量Semaphore</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Java进阶系列"><span class="nav-number">6.</span> <span class="nav-text">Java进阶系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/java/multi_thread/';
+          this.page.identifier = 'java/multi_thread/';
+          this.page.title = 'java/multi_thread/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>

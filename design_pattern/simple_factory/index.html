@@ -1,0 +1,1225 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="java,Java,java 工厂模式,设计模式,简单工厂,工厂模式,java 设计模式,技术世界,郭俊 Jason,大数据架构" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文介绍了简单工厂模式的概念，优缺点，实现方式，以及结合Annotation和反射的改良方案。同时介绍了简单工厂模式（未）遵循的OOP原则。最后给出了简单工厂模式在JDBC中的应用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java设计模式（一） 简单工厂模式不简单">
+<meta property="og:url" content="http://www.jasongj.com/design_pattern/simple_factory/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文介绍了简单工厂模式的概念，优缺点，实现方式，以及结合Annotation和反射的改良方案。同时介绍了简单工厂模式（未）遵循的OOP原则。最后给出了简单工厂模式在JDBC中的应用">
+<meta property="og:image" content="http://www.jasongj.com/img/designpattern/simplefactory/product.png">
+<meta property="og:image" content="http://www.jasongj.com/img/designpattern/simplefactory/simple_factory.png">
+<meta property="og:updated_time" content="2017-02-17T12:31:23.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java设计模式（一） 简单工厂模式不简单">
+<meta name="twitter:description" content="本文介绍了简单工厂模式的概念，优缺点，实现方式，以及结合Annotation和反射的改良方案。同时介绍了简单工厂模式（未）遵循的OOP原则。最后给出了简单工厂模式在JDBC中的应用">
+<meta name="twitter:image" content="http://www.jasongj.com/img/designpattern/simplefactory/product.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/design_pattern/simple_factory/"/>
+
+
+
+
+
+  <title>
+  
+    Java设计模式（一） 简单工厂模式不简单 | 技术世界 | java,Java,java 工厂模式,设计模式,简单工厂,工厂模式,java 设计模式,技术世界,郭俊 Jason,大数据架构
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+    
+  
+
+  <article class="post post-type-normal  post-sticky" itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/design_pattern/simple_factory/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Java设计模式（一） 简单工厂模式不简单
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-03-08T20:49:04+08:00">
+                2016-03-08
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-02-17T20:31:23+08:00">
+                2017-02-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/设计模式/" itemprop="url" rel="index">
+                    <span itemprop="name">设计模式</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/设计模式/Design-Pattern/" itemprop="url" rel="index">
+                    <span itemprop="name">Design Pattern</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/design_pattern/simple_factory/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/design_pattern/simple_factory/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/design_pattern/simple_factory/" class="leancloud_visitors" data-flag-title="Java设计模式（一） 简单工厂模式不简单">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  7,166
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文介绍了简单工厂模式的概念，优缺点，实现方式，以及结合Annotation和反射的改良方案。同时介绍了简单工厂模式（未）遵循的OOP原则。最后给出了简单工厂模式在JDBC中的应用
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处（保留超链接）。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/design_pattern/simple_factory">原文链接</a>　<a href="http://www.jasongj.com/design_pattern/simple_factory">http://www.jasongj.com/design_pattern/simple_factory</a></p>
+</blockquote>
+<h1 id="简单工厂模式使用案例"><a href="#简单工厂模式使用案例" class="headerlink" title="简单工厂模式使用案例"></a>简单工厂模式使用案例</h1><p>有一种抽象产品——汽车（Car），同时有多种具体的子类产品，如BenzCar，BMWCar，LandRoverCar。类图如下<br><img src="http://www.jasongj.com/img/designpattern/simplefactory/product.png" alt="Product class diagram"></p>
+<p>作为司机，如果要开其中一种车，比如BenzCar，最直接的做法是直接创建BenzCar的实例，并执行其drive方法，如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.product.BenzCar;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Driver1</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    BenzCar car = <span class="keyword">new</span> BenzCar();</div><div class="line">    car.drive();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>此时如果要改为开Land Rover，则需要修改代码，创建Land Rover的实例并执行其drive方法。这也就意味着任何时候需要换一辆车开的时候，都必须修改客户端代码。</p>
+<p>一种稍微好点的方法是，通过读取配置文件，获取需要开的车，然后创建相应的实例并由父类Car的引用指向它，利用多态执行不同车的drive方法。如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.ConfigurationException;</div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.XMLConfiguration;</div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.product.BMWCar;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.BenzCar;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.Car;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.LandRoverCar;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Driver2</span> </span>&#123;</div><div class="line">  </div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(Driver2.class);</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> ConfigurationException </span>&#123;</div><div class="line">    XMLConfiguration config = <span class="keyword">new</span> XMLConfiguration(<span class="string">"car.xml"</span>);</div><div class="line">    String name = config.getString(<span class="string">"driver2.name"</span>);</div><div class="line">    Car car;</div><div class="line"></div><div class="line">    <span class="keyword">switch</span> (name) &#123;</div><div class="line">    <span class="keyword">case</span> <span class="string">"Land Rover"</span>:</div><div class="line">      car = <span class="keyword">new</span> LandRoverCar();</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> <span class="string">"BMW"</span>:</div><div class="line">      car = <span class="keyword">new</span> BMWCar();</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> <span class="string">"Benz"</span>:</div><div class="line">      car = <span class="keyword">new</span> BenzCar();</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">default</span>:</div><div class="line">      car = <span class="keyword">null</span>;</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    &#125;</div><div class="line">    LOG.info(<span class="string">"Created car name is &#123;&#125;"</span>, name);</div><div class="line">    car.drive();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>对于Car的使用方而言，只需要通过参数即可指定所需要Car的各类并得到其实例，同时无论使用哪种Car，都不需要修改后续对Car的操作。至此，简单工厂模式的原型已经形成。如果把上述的逻辑判断封装到一个专门的类的静态方法中，则实现了简单工厂模式。工厂代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.factory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.ConfigurationException;</div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.XMLConfiguration;</div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.product.BMWCar;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.BenzCar;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.Car;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.LandRoverCar;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CarFactory1</span> </span>&#123;</div><div class="line">  </div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(CarFactory1.class);</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Car <span class="title">newCar</span><span class="params">()</span> </span>&#123;</div><div class="line">    Car car = <span class="keyword">null</span>;</div><div class="line">    String name = <span class="keyword">null</span>;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      XMLConfiguration config = <span class="keyword">new</span> XMLConfiguration(<span class="string">"car.xml"</span>);</div><div class="line">      name = config.getString(<span class="string">"factory1.name"</span>);</div><div class="line">    &#125; <span class="keyword">catch</span> (ConfigurationException ex) &#123;</div><div class="line">      LOG.error(<span class="string">"parse xml configuration file failed"</span>, ex);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">switch</span> (name) &#123;</div><div class="line">    <span class="keyword">case</span> <span class="string">"Land Rover"</span>:</div><div class="line">      car = <span class="keyword">new</span> LandRoverCar();</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> <span class="string">"BMW"</span>:</div><div class="line">      car = <span class="keyword">new</span> BMWCar();</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> <span class="string">"Benz"</span>:</div><div class="line">      car = <span class="keyword">new</span> BenzCar();</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">default</span>:</div><div class="line">      car = <span class="keyword">null</span>;</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    &#125;</div><div class="line">    LOG.info(<span class="string">"Created car name is &#123;&#125;"</span>, name);</div><div class="line">    <span class="keyword">return</span> car;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>调用方代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.factory.CarFactory1;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.Car;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Driver3</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    Car car = CarFactory1.newCar();</div><div class="line">    car.drive();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>与Driver2相比，所有的判断逻辑都封装在工厂(CarFactory1)当中，Driver3不再需要关心Car的实例化，实现了对象的创建和使用的隔离。</p>
+<p>当然，简单工厂模式并不要求一定要读配置文件来决定实例化哪个类，可以把参数作为工厂静态方法的参数传入。</p>
+<h1 id="简单工厂模式进阶"><a href="#简单工厂模式进阶" class="headerlink" title="简单工厂模式进阶"></a>简单工厂模式进阶</h1><h2 id="使用反射实现扩展性"><a href="#使用反射实现扩展性" class="headerlink" title="使用反射实现扩展性"></a>使用反射实现扩展性</h2><p>从Driver2和CarFactory1的实现中可以看到，当有新的车加入时，需要更新Driver2和CarFactory1的代码也实现对新车的支持。这就违反了<code>开闭原则</code>（Open-Close Principle）。可以利用反射（Reflection）解决该问题。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.factory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.ConfigurationException;</div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.XMLConfiguration;</div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.product.Car;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CarFactory2</span> </span>&#123;</div><div class="line">  </div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(CarFactory2.class);</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Car <span class="title">newCar</span><span class="params">()</span> </span>&#123;</div><div class="line">    Car car = <span class="keyword">null</span>;</div><div class="line">    String name = <span class="keyword">null</span>;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      XMLConfiguration config = <span class="keyword">new</span> XMLConfiguration(<span class="string">"car.xml"</span>);</div><div class="line">      name = config.getString(<span class="string">"factory2.class"</span>);</div><div class="line">    &#125; <span class="keyword">catch</span> (ConfigurationException ex) &#123;</div><div class="line">      LOG.error(<span class="string">"Parsing xml configuration file failed"</span>, ex);</div><div class="line">    &#125;</div><div class="line">    </div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      car = (Car)Class.forName(name).newInstance();</div><div class="line">      LOG.info(<span class="string">"Created car class name is &#123;&#125;"</span>, name);</div><div class="line">    &#125; <span class="keyword">catch</span> (InstantiationException | IllegalAccessException | ClassNotFoundException e) &#123;</div><div class="line">      LOG.error(<span class="string">"Instantiate car &#123;&#125; failed"</span>, name);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> car;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>从上面代码中可以看到，之后如果需要引入新的Car，只需要在配置文件中指定该Car的完整类名（包括package名），CarFactory2即可通过反射将其实例化。实现了对扩展的开放，同时保证了对修改的关闭。熟悉Spring的读者应该会想到Spring IoC的实现。</p>
+<h2 id="注解让简单工厂模式不简单"><a href="#注解让简单工厂模式不简单" class="headerlink" title="注解让简单工厂模式不简单"></a>注解让简单工厂模式不简单</h2><p>上例中使用反射做到了对扩展开放，对修改关闭。但有些时候，使用类的全名不太方便，使用别名会更合适。例如Spring中每个Bean都会有个ID，引用Bean时也会通过ID去引用。像Apache Nifi这样的数据流工具，在流程上使用了职责链模式，而对于单个Processor的创建则使用了工厂，对于用户自定义的Processor并不需要通过代码去注册，而是使用注解（为了更方便理解下面这段代码，请先阅读笔者另外一篇文章<a href="http://www.jasongj.com/2016/01/17/Java1_注解Annotation/">《Java系列（一）Annotation（注解）》</a>）。</p>
+<p>下面就继续在上文案例的基础上使用注解升级简单工厂模式。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.factory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.util.Collections;</div><div class="line"><span class="keyword">import</span> java.util.Map;</div><div class="line"><span class="keyword">import</span> java.util.Set;</div><div class="line"><span class="keyword">import</span> java.util.concurrent.ConcurrentHashMap;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.ConfigurationException;</div><div class="line"><span class="keyword">import</span> org.apache.commons.configuration.XMLConfiguration;</div><div class="line"><span class="keyword">import</span> org.reflections.Reflections;</div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.annotation.Vehicle;</div><div class="line"><span class="keyword">import</span> com.jasongj.product.Car;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CarFactory3</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(CarFactory3.class);</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Map&lt;String, Class&gt; allCars;</div><div class="line"></div><div class="line">  <span class="keyword">static</span> &#123;</div><div class="line">    Reflections reflections = <span class="keyword">new</span> Reflections(<span class="string">"com.jasongj.product"</span>);</div><div class="line">    Set&lt;Class&lt;?&gt;&gt; annotatedClasses = reflections.getTypesAnnotatedWith(Vehicle.class);</div><div class="line">    allCars = <span class="keyword">new</span> ConcurrentHashMap&lt;String, Class&gt;();</div><div class="line">    <span class="keyword">for</span> (Class&lt;?&gt; classObject : annotatedClasses) &#123;</div><div class="line">      Vehicle vehicle = (Vehicle) classObject.getAnnotation(Vehicle.class);</div><div class="line">      allCars.put(vehicle.type(), classObject);</div><div class="line">    &#125;</div><div class="line">    allCars = Collections.unmodifiableMap(allCars);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Car <span class="title">newCar</span><span class="params">()</span> </span>&#123;</div><div class="line">    Car car = <span class="keyword">null</span>;</div><div class="line">    String type = <span class="keyword">null</span>;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      XMLConfiguration config = <span class="keyword">new</span> XMLConfiguration(<span class="string">"car.xml"</span>);</div><div class="line">      type = config.getString(<span class="string">"factory3.type"</span>);</div><div class="line">      LOG.info(<span class="string">"car type is &#123;&#125;"</span>, type);</div><div class="line">    &#125; <span class="keyword">catch</span> (ConfigurationException ex) &#123;</div><div class="line">      LOG.error(<span class="string">"Parsing xml configuration file failed"</span>, ex);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (allCars.containsKey(type)) &#123;</div><div class="line">      LOG.info(<span class="string">"created car type is &#123;&#125;"</span>, type);</div><div class="line">      <span class="keyword">try</span> &#123;</div><div class="line">        car = (Car) allCars.get(type).newInstance();</div><div class="line">      &#125; <span class="keyword">catch</span> (InstantiationException | IllegalAccessException ex) &#123;</div><div class="line">        LOG.error(<span class="string">"Instantiate car failed"</span>, ex);</div><div class="line">      &#125;</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      LOG.error(<span class="string">"specified car type &#123;&#125; does not exist"</span>, type);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> car;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>从上面代码中可以看到，该工厂会扫描所有被Vehicle注解的Car（每种Car都在注解中声明了自己的type，可作为该种Car的别名）然后建立起Car别名与具体Car的Class原映射。此时工厂的静态方法即可根据目标别名实例化对应的Car。</p>
+<p>本文所有代码都可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/SimpleFactoryPattern/src/main" target="_blank" rel="external">作者GitHub</a>下载.</p>
+<h1 id="简单工厂模式详解"><a href="#简单工厂模式详解" class="headerlink" title="简单工厂模式详解"></a>简单工厂模式详解</h1><h2 id="简单工厂模式定义"><a href="#简单工厂模式定义" class="headerlink" title="简单工厂模式定义"></a>简单工厂模式定义</h2><p>简单工厂模式（Simple Factory Pattern）又叫静态工厂方法模式（Static FactoryMethod Pattern）。专门定义一个类（如上文中的CarFactory1、CarFactory2、CarFactory3）来负责创建其它类的实例，由它来决定实例化哪个具体类，从而避免了在客户端代码中显式指定，实现了解耦。该类由于可以创建同一抽象类（或接口）下的不同子类对象，就像一个工厂一样，因此被称为工厂类。</p>
+<h2 id="简单工厂模式类图"><a href="#简单工厂模式类图" class="headerlink" title="简单工厂模式类图"></a>简单工厂模式类图</h2><p>简单工厂模式类图如下所示<br><img src="http://www.jasongj.com/img/designpattern/simplefactory/simple_factory.png" alt="Simple factory pettern class diagram"></p>
+<h2 id="简单工厂模式角色划分"><a href="#简单工厂模式角色划分" class="headerlink" title="简单工厂模式角色划分"></a>简单工厂模式角色划分</h2><ul>
+<li>工厂角色（如上文中的CarFactory1/2/3）：这是简单工厂模式的核心，由它负责创建所有的类的内部逻辑。当然工厂类必须能够被外界调用，创建所需要的产品对象。一般而言，工厂类提供一个静态方法，外部程序通过该方法创建所需对象。</li>
+<li>抽象产品角色(如上文中的Car)：简单工厂模式所创建的是所有对象的父类。注意，这里的父类可以是接口也可以是抽象类，它负责描述所创建实例共有的公共接口。</li>
+<li>具体产品角色（如上文中的BMWCar，BenzCar，LandRoverCar）：简单工厂所创建的具体实例对象，这些具体的产品往往都拥有共同的父类。</li>
+</ul>
+<h2 id="简单工厂模式优点"><a href="#简单工厂模式优点" class="headerlink" title="简单工厂模式优点"></a>简单工厂模式优点</h2><ul>
+<li>工厂类是整个简单工厂模式的关键所在。它包含必要的判断逻辑，能够根据外界给定的信息（配置，或者参数），决定究竟应该创建哪个具体类的对象。用户在使用时可以直接根据工厂类去创建所需的实例，而无需了解这些对象是如何创建以及如何组织的。有利于整个软件体系结构的优化。</li>
+<li>通过引入配置文件和反射，可以在不修改任何客户端代码的情况下更换和增加新的具体产品类，在一定程度上提高了系统的灵活性（如CarFactory2）。</li>
+<li>客户端无须知道所创建的具体产品类的类名，只需要知道具体产品类所对应的参数即可，对于一些复杂的类名，通过简单工厂模式可以减少使用者的记忆量（如CarFactory3）。</li>
+</ul>
+<h2 id="简单工厂模式缺点"><a href="#简单工厂模式缺点" class="headerlink" title="简单工厂模式缺点"></a>简单工厂模式缺点</h2><ul>
+<li>由于工厂类集中了所有实例的创建逻辑，这就直接导致一旦这个工厂出了问题，所有的客户端都会受到牵连。</li>
+<li>由于简单工厂模式的产品是基于一个共同的抽象类或者接口，这样一来，产品的种类增加的时候，即有不同的产品接口或者抽象类的时候，工厂类就需要判断何时创建何种接口的产品，这就和创建何种种类的产品相互混淆在了一起，违背了单一职责原则，导致系统丧失灵活性和可维护性。</li>
+<li>正如上文提到的，一般情况下（如CarFactory1），简单工厂模式违背了“开放-关闭原则”，因为当我们新增加一个产品的时候必须修改工厂类，相应的工厂类就需要重新编译一遍。但这一点可以利用反射（CarFactory3在本质上也是利用反射）在一定程度上解决（如CarFactory2）。</li>
+<li>使用反射可以使简单工厂在一定条件下满足“开放-关闭原则”，但这仅限于产品类的构造及初始化相同的场景。对于各产品实例化或者初始化不同的场景，很难利用反射满足“开放-关闭”原则。</li>
+<li>简单工厂模式由于使用了静态工厂方法，造成工厂角色无法形成基于继承的等级结构。这一点笔者持保留态度，因为继承不是目的，如果没有这样的需求，这一点完全不算缺点，例如JDBC的DriverManager。</li>
+</ul>
+<h1 id="简单工厂模式与OOP原则"><a href="#简单工厂模式与OOP原则" class="headerlink" title="简单工厂模式与OOP原则"></a>简单工厂模式与OOP原则</h1><h2 id="已遵循的原则"><a href="#已遵循的原则" class="headerlink" title="已遵循的原则"></a>已遵循的原则</h2><ul>
+<li>依赖倒置原则</li>
+<li>迪米特法则</li>
+<li>里氏替换原则</li>
+<li>接口隔离原则</li>
+</ul>
+<h2 id="未遵循的原则"><a href="#未遵循的原则" class="headerlink" title="未遵循的原则"></a>未遵循的原则</h2><ul>
+<li>开闭原则（如上文所述，利用配置文件+反射或者注解可以避免这一点）</li>
+<li>单一职责原则（工厂类即要负责逻辑判断又要负责实例创建）</li>
+</ul>
+<h1 id="简单工厂模式在JDK中的典型应用"><a href="#简单工厂模式在JDK中的典型应用" class="headerlink" title="简单工厂模式在JDK中的典型应用"></a>简单工厂模式在JDK中的典型应用</h1><p>简单工厂模式在JDK中最典型的应用要数JDBC了。可以把关系型数据库认为是一种抽象产品，各厂商提供的具体关系型数据库（MySQL，PostgreSQL，Oracle）则是具体产品。DriverManager是工厂类。应用程序通过JDBC接口使用关系型数据库时，并不需要关心具体使用的是哪种数据库，而直接使用DriverManager的静态方法去得到该数据库的Connection。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.sql.Connection;</div><div class="line"><span class="keyword">import</span> java.sql.DriverManager;</div><div class="line"><span class="keyword">import</span> java.sql.PreparedStatement;</div><div class="line"><span class="keyword">import</span> java.sql.SQLException;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JDBC</span> </span>&#123;</div><div class="line">  </div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(JDBC.class);</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    Connection conn = <span class="keyword">null</span>;</div><div class="line">    <span class="keyword">try</span> &#123;</div><div class="line">      Class.forName(<span class="string">"org.apache.hive.jdbc.HiveDriver"</span>);</div><div class="line">      conn = DriverManager.getConnection(<span class="string">"jdbc:hive2://127.0.0.1:10000/default"</span>);</div><div class="line">      PreparedStatement ps = conn.prepareStatement(<span class="string">"select count(*) from test.test"</span>);</div><div class="line">      ps.execute();</div><div class="line">    &#125; <span class="keyword">catch</span> (SQLException ex) &#123;</div><div class="line">      LOG.warn(<span class="string">"Execute query failed"</span>, ex);</div><div class="line">    &#125; <span class="keyword">catch</span>(ClassNotFoundException e) &#123;</div><div class="line">      LOG.warn(<span class="string">"Load Hive driver failed"</span>, e);</div><div class="line">    &#125; <span class="keyword">finally</span> &#123;</div><div class="line">      <span class="keyword">if</span>(conn != <span class="keyword">null</span> )&#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">          conn.close();</div><div class="line">        &#125; <span class="keyword">catch</span> (SQLException e) &#123;</div><div class="line">          <span class="comment">// NO-OPT</span></div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="Java设计模式系列"><a href="#Java设计模式系列" class="headerlink" title="Java设计模式系列"></a>Java设计模式系列</h1><ul>
+<li><a href="http://www.jasongj.com/design_pattern/simple_factory/">Java设计模式（一） 简单工厂模式不简单</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/factory_method/">Java设计模式（二） 工厂方法模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/abstract_factory/">Java设计模式（三） 抽象工厂模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/observer/">Java设计模式（四） 观察者模式 </a></li>
+<li><a href="http://www.jasongj.com/design_pattern/composite/">Java设计模式（五） 组合模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/proxy_decorator/">Java设计模式（六） 代理模式 VS. 装饰模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/">Java设计模式（七） Spring AOP JDK动态代理 vs. cglib</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/adapter/">Java设计模式（八） 适配器模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/bridge/">Java设计模式（九） 桥接模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/singleton/">Java设计模式（十） 你真的用对单例模式了吗？</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/flyweight/">Java设计模式（十一） 享元模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/strategy/">Java设计模式（十二） 策略模式</a></li>
+<li><a href="http://www.jasongj.com/design_pattern/summary/">Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'design_pattern/simple_factory/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"># Java</a>
+          
+            <a href="/tags/设计模式/" rel="tag"># 设计模式</a>
+          
+            <a href="/tags/Design-Pattern/" rel="tag"># Design Pattern</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/01/17/Java1_注解Annotation/" rel="next" title="Java进阶（一）Annotation（注解）">
+                <i class="fa fa-chevron-left"></i> Java进阶（一）Annotation（注解）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/sql/cte/" rel="prev" title="SQL优化（五） PostgreSQL （递归）CTE 通用表表达式">
+                SQL优化（五） PostgreSQL （递归）CTE 通用表表达式 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/design_pattern/simple_factory/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/design_pattern/simple_factory/'),
+                identifier: decodeURI('/design_pattern/simple_factory/'),
+                title: 'Java设计模式（一） 简单工厂模式不简单',
+                slug: 'design_pattern/simple_factory/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A%EF%BC%88Jason%EF%BC%89" title="作者在InfoQ上的专栏" target="_blank">作者在InfoQ上的专栏</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#简单工厂模式使用案例"><span class="nav-number">1.</span> <span class="nav-text">简单工厂模式使用案例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#简单工厂模式进阶"><span class="nav-number">2.</span> <span class="nav-text">简单工厂模式进阶</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#使用反射实现扩展性"><span class="nav-number">2.1.</span> <span class="nav-text">使用反射实现扩展性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#注解让简单工厂模式不简单"><span class="nav-number">2.2.</span> <span class="nav-text">注解让简单工厂模式不简单</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#简单工厂模式详解"><span class="nav-number">3.</span> <span class="nav-text">简单工厂模式详解</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简单工厂模式定义"><span class="nav-number">3.1.</span> <span class="nav-text">简单工厂模式定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#简单工厂模式类图"><span class="nav-number">3.2.</span> <span class="nav-text">简单工厂模式类图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#简单工厂模式角色划分"><span class="nav-number">3.3.</span> <span class="nav-text">简单工厂模式角色划分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#简单工厂模式优点"><span class="nav-number">3.4.</span> <span class="nav-text">简单工厂模式优点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#简单工厂模式缺点"><span class="nav-number">3.5.</span> <span class="nav-text">简单工厂模式缺点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#简单工厂模式与OOP原则"><span class="nav-number">4.</span> <span class="nav-text">简单工厂模式与OOP原则</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#已遵循的原则"><span class="nav-number">4.1.</span> <span class="nav-text">已遵循的原则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#未遵循的原则"><span class="nav-number">4.2.</span> <span class="nav-text">未遵循的原则</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#简单工厂模式在JDK中的典型应用"><span class="nav-number">5.</span> <span class="nav-text">简单工厂模式在JDK中的典型应用</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Java设计模式系列"><span class="nav-number">6.</span> <span class="nav-text">Java设计模式系列</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 240.0k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/design_pattern/simple_factory/';
+          this.page.identifier = 'design_pattern/simple_factory/';
+          this.page.title = 'design_pattern/simple_factory/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+</body>
+</html>
