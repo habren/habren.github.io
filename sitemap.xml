@@ -23,13 +23,6 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/kafka/transaction/</loc>
-    
-    <lastmod>2017-11-05T00:01:01.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://www.jasongj.com/spark/skew/</loc>
     
     <lastmod>2017-10-17T00:24:53.000Z</lastmod>
@@ -72,35 +65,7 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/</loc>
-    
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/2015/03/15/count_distinct/</loc>
-    
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/2015/06/08/KafkaColumn3/</loc>
-    
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/2015/03/07/Join1/</loc>
-    
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/uml/class_diagram/</loc>
+    <loc>http://www.jasongj.com/2015/08/09/KafkaColumn4/</loc>
     
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     
@@ -114,14 +79,21 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/sql/mvcc/</loc>
+    <loc>http://www.jasongj.com/2015/12/13/SQL3_partition/</loc>
     
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/</loc>
+    <loc>http://www.jasongj.com/uml/class_diagram/</loc>
+    
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/2015/03/15/count_distinct/</loc>
     
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     
@@ -142,14 +114,35 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/2015/08/09/KafkaColumn4/</loc>
+    <loc>http://www.jasongj.com/sql/mvcc/</loc>
     
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/2015/12/13/SQL3_partition/</loc>
+    <loc>http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/</loc>
+    
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/</loc>
+    
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/2015/06/08/KafkaColumn3/</loc>
+    
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/2015/03/07/Join1/</loc>
     
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     
@@ -177,13 +170,6 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/baidu_verify_9IG8zmRsVn.html</loc>
-    
-    <lastmod>2017-02-18T02:53:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://www.jasongj.com/README.html</loc>
     
     <lastmod>2017-02-18T02:53:23.000Z</lastmod>
@@ -205,51 +191,9 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/design_pattern/strategy/</loc>
+    <loc>http://www.jasongj.com/baidu_verify_9IG8zmRsVn.html</loc>
     
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/design_pattern/flyweight/</loc>
-    
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/design_pattern/summary/</loc>
-    
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/design_pattern/simple_factory/</loc>
-    
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/design_pattern/abstract_factory/</loc>
-    
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/design_pattern/bridge/</loc>
-    
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/design_pattern/adapter/</loc>
-    
-    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    <lastmod>2017-02-18T02:53:23.000Z</lastmod>
     
   </url>
   
@@ -275,6 +219,20 @@
   </url>
   
   <url>
+    <loc>http://www.jasongj.com/design_pattern/bridge/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/design_pattern/adapter/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://www.jasongj.com/design_pattern/dynamic_proxy_cglib/</loc>
     
     <lastmod>2017-02-17T12:31:23.000Z</lastmod>
@@ -282,7 +240,49 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/java/nio_reactor/</loc>
+    <loc>http://www.jasongj.com/design_pattern/abstract_factory/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/design_pattern/simple_factory/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/design_pattern/strategy/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/design_pattern/summary/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/design_pattern/flyweight/</loc>
+    
+    <lastmod>2017-02-17T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/java/multi_thread/</loc>
+    
+    <lastmod>2017-02-15T12:31:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://www.jasongj.com/java/thread_communication/</loc>
     
     <lastmod>2017-02-15T12:31:23.000Z</lastmod>
     
@@ -303,14 +303,7 @@
   </url>
   
   <url>
-    <loc>http://www.jasongj.com/java/multi_thread/</loc>
-    
-    <lastmod>2017-02-15T12:31:23.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://www.jasongj.com/java/thread_communication/</loc>
+    <loc>http://www.jasongj.com/java/nio_reactor/</loc>
     
     <lastmod>2017-02-15T12:31:23.000Z</lastmod>
     
