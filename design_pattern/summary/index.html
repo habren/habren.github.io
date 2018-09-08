@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文讲解了设计模式与OOP的三大特性及OOP七项原则间的关系，并讲解了使用设计模式的好处及为何需要使用设计模式。最后通过问答形式讲解了设计模式相关的常见问题">
+<meta name="keywords" content="java 设计模式,java design pattern,设计模式,design pattern,为什么 设计模式,why design pattern,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章">
 <meta property="og:url" content="http://www.jasongj.com/design_pattern/summary/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文讲解了设计模式与OOP的三大特性及OOP七项原则间的关系，并讲解了使用设计模式的好处及为何需要使用设计模式。最后通过问答形式讲解了设计模式相关的常见问题">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2017-02-17T12:31:23.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Java设计模式（十三） 别人再问你设计模式，叫他看这篇文章">
@@ -721,7 +723,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -852,7 +854,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -869,7 +871,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1196,5 +1198,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

@@ -76,27 +76,29 @@
 
 
 <meta name="description" content="本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示">
+<meta name="keywords" content="kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,大数据架构,kafka Stream,流处理,流计算,streaming,stream processing,技术世界">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kafka设计解析（七）- Kafka Stream">
 <meta property="og:url" content="http://www.jasongj.com/kafka/kafka_stream/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/batch_procissing.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/library.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/Kafka%20Stream%20Architecture.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/1%20thread.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/2%20threads.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/2%20instances.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/2%20servers.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/ktable_kstream.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/Hopping%20Time%20Window.gif">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/Tumbling Time Window.gif">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/batch_procissing.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/library.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/Kafka%20Stream%20Architecture.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/1%20thread.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/2%20threads.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/2%20instances.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/2%20servers.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/ktable_kstream.png">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/Hopping%20Time%20Window.gif">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/Tumbling%20Time%20Window.gif">
 <meta property="og:updated_time" content="2017-08-07T00:01:01.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kafka设计解析（七）- Kafka Stream">
 <meta name="twitter:description" content="本文介绍了Kafka Stream的背景，如Kafka Stream是什么，什么是流式计算，以及为什么要有Kafka Stream。接着介绍了Kafka Stream的整体架构，并行模型，状态存储，以及主要的两种数据集KStream和KTable。并且分析了Kafka Stream如何解决流式系统中的关键问题，如时间定义，窗口操作，Join操作，聚合操作，以及如何处理乱序和提供容错能力。最后结合示">
-<meta name="twitter:image" content="http://www.jasongj.com//www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png">
+<meta name="twitter:image" content="http://www.jasongj.com/img/kafka/KafkaColumn7/stream_procissing.png">
 
 
 
@@ -485,7 +487,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  8,633
+                  8,770
                 </span>
               
 
@@ -544,10 +546,10 @@
 <h1 id="Kafka-Stream架构"><a href="#Kafka-Stream架构" class="headerlink" title="Kafka Stream架构"></a>Kafka Stream架构</h1><h2 id="Kafka-Stream整体架构"><a href="#Kafka-Stream整体架构" class="headerlink" title="Kafka Stream整体架构"></a>Kafka Stream整体架构</h2><p>Kafka Stream的整体架构图如下所示。</p>
 <div align="center"><br><img width="80%" src="//www.jasongj.com/img/kafka/KafkaColumn7/Kafka%20Stream%20Architecture.png" alt="Kafka Stream Architecture"><br></div>
 
-<p>目前（Kafka 0.11.0.0）Kafka Stream的数据源只能如上图所示是Kafka。但是处理结果并不一定要如上图所示输出到Kafka。实际上KStream和Ktable的实例化都需要指定Topic。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">KStream&lt;String, String&gt; stream = builder.stream(<span class="string">"words-stream"</span>);</div><div class="line"></div><div class="line">KTable&lt;String, String&gt; table = builder.table(<span class="string">"words-table"</span>, <span class="string">"words-store"</span>);</div></pre></td></tr></table></figure></p>
+<p>目前（Kafka 0.11.0.0）Kafka Stream的数据源只能如上图所示是Kafka。但是处理结果并不一定要如上图所示输出到Kafka。实际上KStream和Ktable的实例化都需要指定Topic。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">KStream&lt;String, String&gt; stream = builder.stream(<span class="string">"words-stream"</span>);</span><br><span class="line"></span><br><span class="line">KTable&lt;String, String&gt; table = builder.table(<span class="string">"words-table"</span>, <span class="string">"words-store"</span>);</span><br></pre></td></tr></table></figure></p>
 <p>另外，上图中的Consumer和Producer并不需要开发者在应用中显示实例化，而是由Kafka Stream根据参数隐式实例化和管理，从而降低了使用门槛。开发者只需要专注于开发核心业务逻辑，也即上图中Task内的部分。</p>
 <h2 id="Processor-Topology"><a href="#Processor-Topology" class="headerlink" title="Processor Topology"></a>Processor Topology</h2><p>基于Kafka Stream的流式应用的业务逻辑全部通过一个被称为Processor Topology的地方执行。它与Storm的Topology和Spark的DAG类似，都定义了数据在各个处理单元（在Kafka Stream中被称作Processor）间的流动方式，或者说定义了数据的处理逻辑。</p>
-<p>下面是一个Processor的示例，它实现了Word Count功能，并且每秒输出一次结果。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountProcessor</span> <span class="keyword">implements</span> <span class="title">Processor</span>&lt;<span class="title">String</span>, <span class="title">String</span>&gt; </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> ProcessorContext context;</div><div class="line">  <span class="keyword">private</span> KeyValueStore&lt;String, Integer&gt; kvStore;</div><div class="line"></div><div class="line">  <span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>)</div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(ProcessorContext context)</span> </span>&#123;</div><div class="line">    <span class="keyword">this</span>.context = context;</div><div class="line">    <span class="keyword">this</span>.context.schedule(<span class="number">1000</span>);</div><div class="line">    <span class="keyword">this</span>.kvStore = (KeyValueStore&lt;String, Integer&gt;) context.getStateStore(<span class="string">"Counts"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(String key, String value)</span> </span>&#123;</div><div class="line">    Stream.of(value.toLowerCase().split(<span class="string">" "</span>)).forEach((String word) -&gt; &#123;</div><div class="line">      Optional&lt;Integer&gt; counts = Optional.ofNullable(kvStore.get(word));</div><div class="line">      <span class="keyword">int</span> count = counts.map(wordcount -&gt; wordcount + <span class="number">1</span>).orElse(<span class="number">1</span>);</div><div class="line">      kvStore.put(word, count);</div><div class="line">    &#125;);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">punctuate</span><span class="params">(<span class="keyword">long</span> timestamp)</span> </span>&#123;</div><div class="line">    KeyValueIterator&lt;String, Integer&gt; iterator = <span class="keyword">this</span>.kvStore.all();</div><div class="line">    iterator.forEachRemaining(entry -&gt; &#123;</div><div class="line">      context.forward(entry.key, entry.value);</div><div class="line">      <span class="keyword">this</span>.kvStore.delete(entry.key);</div><div class="line">    &#125;);</div><div class="line">    context.commit();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">this</span>.kvStore.close();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>下面是一个Processor的示例，它实现了Word Count功能，并且每秒输出一次结果。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountProcessor</span> <span class="keyword">implements</span> <span class="title">Processor</span>&lt;<span class="title">String</span>, <span class="title">String</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> ProcessorContext context;</span><br><span class="line">  <span class="keyword">private</span> KeyValueStore&lt;String, Integer&gt; kvStore;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>)</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(ProcessorContext context)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.context = context;</span><br><span class="line">    <span class="keyword">this</span>.context.schedule(<span class="number">1000</span>);</span><br><span class="line">    <span class="keyword">this</span>.kvStore = (KeyValueStore&lt;String, Integer&gt;) context.getStateStore(<span class="string">"Counts"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(String key, String value)</span> </span>&#123;</span><br><span class="line">    Stream.of(value.toLowerCase().split(<span class="string">" "</span>)).forEach((String word) -&gt; &#123;</span><br><span class="line">      Optional&lt;Integer&gt; counts = Optional.ofNullable(kvStore.get(word));</span><br><span class="line">      <span class="keyword">int</span> count = counts.map(wordcount -&gt; wordcount + <span class="number">1</span>).orElse(<span class="number">1</span>);</span><br><span class="line">      kvStore.put(word, count);</span><br><span class="line">    &#125;);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">punctuate</span><span class="params">(<span class="keyword">long</span> timestamp)</span> </span>&#123;</span><br><span class="line">    KeyValueIterator&lt;String, Integer&gt; iterator = <span class="keyword">this</span>.kvStore.all();</span><br><span class="line">    iterator.forEachRemaining(entry -&gt; &#123;</span><br><span class="line">      context.forward(entry.key, entry.value);</span><br><span class="line">      <span class="keyword">this</span>.kvStore.delete(entry.key);</span><br><span class="line">    &#125;);</span><br><span class="line">    context.commit();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.kvStore.close();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>从上述代码中可见</p>
 <ul>
 <li><code>process</code>定义了对每条记录的处理逻辑，也印证了Kafka可具有记录级的数据处理能力。</li>
@@ -620,10 +622,10 @@
 <li>参与Join的KTable或KStream对应的Topic的Partition数相同</li>
 <li>Partitioner策略的最终结果等效（实现不需要完全一样，只要效果一样即可），也即Key相同的情况下，被分配到ID相同的Partition内</li>
 </ul>
-<p>如果上述条件不满足，可通过调用如下方法使得它满足上述条件。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="function">KStream&lt;K, V&gt; <span class="title">through</span><span class="params">(Serde&lt;K&gt; keySerde, Serde&lt;V&gt; valSerde, StreamPartitioner&lt;K, V&gt; partitioner, String topic)</span></span></div></pre></td></tr></table></figure></p>
+<p>如果上述条件不满足，可通过调用如下方法使得它满足上述条件。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">KStream&lt;K, V&gt; <span class="title">through</span><span class="params">(Serde&lt;K&gt; keySerde, Serde&lt;V&gt; valSerde, StreamPartitioner&lt;K, V&gt; partitioner, String topic)</span></span></span><br></pre></td></tr></table></figure></p>
 <h2 id="聚合与乱序处理"><a href="#聚合与乱序处理" class="headerlink" title="聚合与乱序处理"></a>聚合与乱序处理</h2><p>聚合操作可应用于KStream和KTable。当聚合发生在KStream上时必须指定窗口，从而限定计算的目标数据集。</p>
 <p>需要说明的是，聚合操作的结果肯定是KTable。因为KTable是可更新的，可以在晚到的数据到来时（也即发生数据乱序时）更新结果KTable。</p>
-<p>这里举例说明。假设对KStream以5秒为窗口大小，进行Tumbling Time Window上的Count操作。并且KStream先后出现时间为1秒, 3秒, 5秒的数据，此时5秒的窗口已达上限，Kafka Stream关闭该窗口，触发Count操作并将结果3输出到KTable中（假设该结果表示为<1-5,3>）。若1秒后，又收到了时间为2秒的记录，由于1-5秒的窗口已关闭，若直接抛弃该数据，则可认为之前的结果<1-5,3>不准确。而如果直接将完整的结果<1-5,4>输出到KStream中，则KStream中将会包含该窗口的2条记录，<1-5,3>, <1-5,4>，也会存在肮数据。因此Kafka Stream选择将聚合结果存于KTable中，此时新的结果<1-5,4>会替代旧的结果<1-5,3>。用户可得到完整的正确的结果。</1-5,3></1-5,4></1-5,4></1-5,3></1-5,4></1-5,3></1-5,3></p>
+<p>这里举例说明。假设对KStream以5秒为窗口大小，进行Tumbling Time Window上的Count操作。并且KStream先后出现时间为1秒, 3秒, 5秒的数据，此时5秒的窗口已达上限，Kafka Stream关闭该窗口，触发Count操作并将结果3输出到KTable中（假设该结果表示为&lt;1-5,3&gt;）。若1秒后，又收到了时间为2秒的记录，由于1-5秒的窗口已关闭，若直接抛弃该数据，则可认为之前的结果&lt;1-5,3&gt;不准确。而如果直接将完整的结果&lt;1-5,4&gt;输出到KStream中，则KStream中将会包含该窗口的2条记录，&lt;1-5,3&gt;, &lt;1-5,4&gt;，也会存在肮数据。因此Kafka Stream选择将聚合结果存于KTable中，此时新的结果&lt;1-5,4&gt;会替代旧的结果&lt;1-5,3&gt;。用户可得到完整的正确的结果。</p>
 <p>这种方式保证了数据准确性，同时也提高了容错性。</p>
 <p>但需要说明的是，Kafka Stream并不会对所有晚到的数据都重新计算并更新结果集，而是让用户设置一个<code>retention period</code>，将每个窗口的结果集在内存中保留一定时间，该窗口内的数据晚到时，直接合并计算，并更新结果KTable。超过<code>retention period</code>后，该窗口结果将从内存中删除，并且晚到的数据即使落入窗口，也会被直接丢弃。</p>
 <h2 id="容错"><a href="#容错" class="headerlink" title="容错"></a>容错</h2><p>Kafka Stream从如下几个方面进行容错</p>
@@ -632,12 +634,12 @@
 <li>状态存储实现快速故障恢复和从故障点继续处理。对于Join和聚合及窗口等有状态计算，状态存储可保存中间状态。即使发生Failover或Consumer Rebalance，仍然可以通过状态存储恢复中间状态，从而可以继续从Failover或Consumer Rebalance前的点继续计算。</li>
 <li>KTable与<code>retention period</code>提供了对乱序数据的处理能力。</li>
 </ul>
-<h1 id="Kafka-Stream应用示例"><a href="#Kafka-Stream应用示例" class="headerlink" title="Kafka Stream应用示例"></a>Kafka Stream应用示例</h1><p>下面结合一个案例来讲解如何开发Kafka Stream应用。本例完整代码可从<a href="https://github.com/habren/KafkaExample" target="_blank" rel="external">作者Github</a>获取。</p>
+<h1 id="Kafka-Stream应用示例"><a href="#Kafka-Stream应用示例" class="headerlink" title="Kafka Stream应用示例"></a>Kafka Stream应用示例</h1><p>下面结合一个案例来讲解如何开发Kafka Stream应用。本例完整代码可从<a href="https://github.com/habren/KafkaExample" target="_blank" rel="noopener">作者Github</a>获取。</p>
 <p>订单KStream（名为orderStream），底层Topic的Partition数为3，Key为用户名，Value包含用户名，商品名，订单时间，数量。用户KTable（名为userTable），底层Topic的Partition数为3，Key为用户名，Value包含性别，地址和年龄。商品KTable（名为itemTable），底层Topic的Partition数为6，Key为商品名，价格，种类和产地。现在希望计算每小时购买产地与自己所在地相同的用户总数。</p>
-<p>首先由于希望使用订单时间，而它包含在orderStream的Value中，需要通过提供一个实现TimestampExtractor接口的类从orderStream对应的Topic中抽取出订单时间。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderTimestampExtractor</span> <span class="keyword">implements</span> <span class="title">TimestampExtractor</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extract</span><span class="params">(ConsumerRecord&lt;Object, Object&gt; record)</span> </span>&#123;</div><div class="line">    <span class="keyword">if</span>(record <span class="keyword">instanceof</span> Order) &#123;</div><div class="line">      <span class="keyword">return</span> ((Order)record).getTS();</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>接着通过将orderStream与userTable进行Join，来获取订单用户所在地。由于二者对应的Topic的Partition数相同，且Key都为用户名，再假设Producer往这两个Topic写数据时所用的Partitioner实现相同，则此时上文所述Join条件满足，可直接进行Join。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">orderUserStream = orderStream</div><div class="line">    .leftJoin(userTable, </div><div class="line">         <span class="comment">// 该lamda表达式定义了如何从orderStream与userTable生成结果集的Value</span></div><div class="line">        (Order order, User user) -&gt; OrderUser.fromOrderUser(order, user), </div><div class="line">         <span class="comment">// 结果集Key序列化方式</span></div><div class="line">        Serdes.String(),</div><div class="line">         <span class="comment">// 结果集Value序列化方式</span></div><div class="line">         SerdesFactory.serdFrom(Order.class))</div><div class="line">    .filter((String userName, OrderUser orderUser) -&gt; orderUser.userAddress != <span class="keyword">null</span>)</div></pre></td></tr></table></figure></p>
+<p>首先由于希望使用订单时间，而它包含在orderStream的Value中，需要通过提供一个实现TimestampExtractor接口的类从orderStream对应的Topic中抽取出订单时间。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderTimestampExtractor</span> <span class="keyword">implements</span> <span class="title">TimestampExtractor</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extract</span><span class="params">(ConsumerRecord&lt;Object, Object&gt; record)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(record <span class="keyword">instanceof</span> Order) &#123;</span><br><span class="line">      <span class="keyword">return</span> ((Order)record).getTS();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>接着通过将orderStream与userTable进行Join，来获取订单用户所在地。由于二者对应的Topic的Partition数相同，且Key都为用户名，再假设Producer往这两个Topic写数据时所用的Partitioner实现相同，则此时上文所述Join条件满足，可直接进行Join。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">orderUserStream = orderStream</span><br><span class="line">    .leftJoin(userTable, </span><br><span class="line">         <span class="comment">// 该lamda表达式定义了如何从orderStream与userTable生成结果集的Value</span></span><br><span class="line">        (Order order, User user) -&gt; OrderUser.fromOrderUser(order, user), </span><br><span class="line">         <span class="comment">// 结果集Key序列化方式</span></span><br><span class="line">        Serdes.String(),</span><br><span class="line">         <span class="comment">// 结果集Value序列化方式</span></span><br><span class="line">         SerdesFactory.serdFrom(Order.class))</span><br><span class="line">    .filter((String userName, OrderUser orderUser) -&gt; orderUser.userAddress != <span class="keyword">null</span>)</span><br></pre></td></tr></table></figure></p>
 <p>从上述代码中，可以看到，Join时需要指定如何从参与Join双方的记录生成结果记录的Value。Key不需要指定，因为结果记录的Key与Join Key相同，故无须指定。Join结果存于名为orderUserStream的KStream中。</p>
-<p>接下来需要将orderUserStream与itemTable进行Join，从而获取商品产地。此时orderUserStream的Key仍为用户名，而itemTable对应的Topic的Key为产品名，并且二者的Partition数不一样，因此无法直接Join。此时需要通过through方法，对其中一方或双方进行重新分区，使得二者满足Join条件。这一过程相当于Spark的Shuffle过程和Storm的FieldGrouping。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">orderUserStrea</div><div class="line">    .through(</div><div class="line">        <span class="comment">// Key的序列化方式</span></div><div class="line">        Serdes.String(),</div><div class="line">        <span class="comment">// Value的序列化方式 </span></div><div class="line">        SerdesFactory.serdFrom(OrderUser.class), </div><div class="line">        <span class="comment">// 重新按照商品名进行分区，具体取商品名的哈希值，然后对分区数取模</span></div><div class="line">        (String key, OrderUser orderUser, <span class="keyword">int</span> numPartitions) -&gt; (orderUser.getItemName().hashCode() &amp; <span class="number">0x7FFFFFFF</span>) % numPartitions, </div><div class="line">        <span class="string">"orderuser-repartition-by-item"</span>)</div><div class="line">    .leftJoin(itemTable, (OrderUser orderUser, Item item) -&gt; OrderUserItem.fromOrderUser(orderUser, item), Serdes.String(), SerdesFactory.serdFrom(OrderUser.class))</div></pre></td></tr></table></figure></p>
+<p>接下来需要将orderUserStream与itemTable进行Join，从而获取商品产地。此时orderUserStream的Key仍为用户名，而itemTable对应的Topic的Key为产品名，并且二者的Partition数不一样，因此无法直接Join。此时需要通过through方法，对其中一方或双方进行重新分区，使得二者满足Join条件。这一过程相当于Spark的Shuffle过程和Storm的FieldGrouping。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">orderUserStrea</span><br><span class="line">    .through(</span><br><span class="line">        <span class="comment">// Key的序列化方式</span></span><br><span class="line">        Serdes.String(),</span><br><span class="line">        <span class="comment">// Value的序列化方式 </span></span><br><span class="line">        SerdesFactory.serdFrom(OrderUser.class), </span><br><span class="line">        <span class="comment">// 重新按照商品名进行分区，具体取商品名的哈希值，然后对分区数取模</span></span><br><span class="line">        (String key, OrderUser orderUser, <span class="keyword">int</span> numPartitions) -&gt; (orderUser.getItemName().hashCode() &amp; <span class="number">0x7FFFFFFF</span>) % numPartitions, </span><br><span class="line">        <span class="string">"orderuser-repartition-by-item"</span>)</span><br><span class="line">    .leftJoin(itemTable, (OrderUser orderUser, Item item) -&gt; OrderUserItem.fromOrderUser(orderUser, item), Serdes.String(), SerdesFactory.serdFrom(OrderUser.class))</span><br></pre></td></tr></table></figure></p>
 <p>从上述代码可见，through时需要指定Key的序列化器，Value的序列化器，以及分区方式和结果集所在的Topic。这里要注意，该Topic（orderuser-repartition-by-item）的Partition数必须与itemTable对应Topic的Partition数相同，并且through使用的分区方法必须与iteamTable对应Topic的分区方式一样。经过这种<code>through</code>操作，orderUserStream与itemTable满足了Join条件，可直接进行Join。</p>
 <h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><ul>
 <li>Kafka Stream的并行模型完全基于Kafka的分区机制和Rebalance机制，实现了在线动态调整并行度</li>
@@ -728,9 +730,9 @@
           
             <a href="/tags/big-data/" rel="tag"># big data</a>
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
-          
             <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
             <a href="/tags/Kafka/" rel="tag"># Kafka</a>
           
@@ -862,7 +864,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -993,7 +995,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -1010,7 +1012,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1337,5 +1339,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

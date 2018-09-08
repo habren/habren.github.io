@@ -1,0 +1,1396 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,kafka 事务,exactly once,正好一次" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文介绍了Kafka实现事务性的几个阶段——正好一次语义与原子操作。之后详细分析了Kafka事务机制的实现原理，并介绍了Kafka如何处理事务相关的异常情况，如Transaction Coordinator宕机。最后介绍了Kafka的事务机制与PostgreSQL的MVCC以及Zookeeper的原子广播实现事务的异同">
+<meta name="keywords" content="kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,kafka 事务,exactly once,正好一次">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka设计解析（八）- Exactly Once语义与事务机制原理">
+<meta property="og:url" content="http://www.jasongj.com/kafka/transaction/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文介绍了Kafka实现事务性的几个阶段——正好一次语义与原子操作。之后详细分析了Kafka事务机制的实现原理，并介绍了Kafka如何处理事务相关的异常情况，如Transaction Coordinator宕机。最后介绍了Kafka的事务机制与PostgreSQL的MVCC以及Zookeeper的原子广播实现事务的异同">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn8/KafkaTransaction.png">
+<meta property="og:updated_time" content="2017-11-28T00:01:01.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kafka设计解析（八）- Exactly Once语义与事务机制原理">
+<meta name="twitter:description" content="本文介绍了Kafka实现事务性的几个阶段——正好一次语义与原子操作。之后详细分析了Kafka事务机制的实现原理，并介绍了Kafka如何处理事务相关的异常情况，如Transaction Coordinator宕机。最后介绍了Kafka的事务机制与PostgreSQL的MVCC以及Zookeeper的原子广播实现事务的异同">
+<meta name="twitter:image" content="http://www.jasongj.com/img/kafka/KafkaColumn8/KafkaTransaction.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/kafka/transaction/"/>
+
+
+
+
+
+  <title>
+  
+    Kafka Exactly Once语义与事务机制原理 | 技术世界 | kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,kafka 事务,exactly once,正好一次
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/kafka/transaction/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kafka设计解析（八）- Exactly Once语义与事务机制原理
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-11-21T08:01:01+08:00">
+                2017-11-21
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2017-11-28T08:01:01+08:00">
+                2017-11-28
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big data</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/big-data/大数据/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/kafka/transaction/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/kafka/transaction/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/kafka/transaction/" class="leancloud_visitors" data-flag-title="Kafka设计解析（八）- Exactly Once语义与事务机制原理">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  8,847
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文介绍了Kafka实现事务性的几个阶段——正好一次语义与原子操作。之后详细分析了Kafka事务机制的实现原理，并介绍了Kafka如何处理事务相关的异常情况，如Transaction Coordinator宕机。最后介绍了Kafka的事务机制与PostgreSQL的MVCC以及Zookeeper的原子广播实现事务的异同
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/kafka/transaction/">原文链接</a>　<a href="http://www.jasongj.com/kafka/transaction/">http://www.jasongj.com/kafka/transaction/</a></p>
+</blockquote>
+<h1 id="写在前面的话"><a href="#写在前面的话" class="headerlink" title="写在前面的话"></a>写在前面的话</h1><p>本文所有Kafka原理性的描述除特殊说明外均基于Kafka 1.0.0版本。</p>
+<h1 id="为什么要提供事务机制"><a href="#为什么要提供事务机制" class="headerlink" title="为什么要提供事务机制"></a>为什么要提供事务机制</h1><p>Kafka事务机制的实现主要是为了支持</p>
+<ul>
+<li><code>Exactly Once</code>即正好一次语义</li>
+<li>操作的原子性</li>
+<li>有状态操作的可恢复性</li>
+</ul>
+<h2 id="Exactly-Once"><a href="#Exactly-Once" class="headerlink" title="Exactly Once"></a><code>Exactly Once</code></h2><p>《<a href="/2015/03/10/KafkaColumn1/#Kafka-delivery-guarantee">Kafka背景及架构介绍</a>》一文中有说明Kafka在0.11.0.0之前的版本中只支持<code>At Least Once</code>和<code>At Most Once</code>语义，尚不支持<code>Exactly Once</code>语义。</p>
+<p>但是在很多要求严格的场景下，如使用Kafka处理交易数据，<code>Exactly Once</code>语义是必须的。我们可以通过让下游系统具有幂等性来配合Kafka的<code>At Least Once</code>语义来间接实现<code>Exactly Once</code>。但是：</p>
+<ul>
+<li>该方案要求下游系统支持幂等操作，限制了Kafka的适用场景</li>
+<li>实现门槛相对较高，需要用户对Kafka的工作机制非常了解</li>
+<li>对于Kafka Stream而言，Kafka本身即是自己的下游系统，但Kafka在0.11.0.0版本之前不具有幂等发送能力</li>
+</ul>
+<p>因此，Kafka本身对<code>Exactly Once</code>语义的支持就非常必要。</p>
+<h2 id="操作原子性"><a href="#操作原子性" class="headerlink" title="操作原子性"></a>操作原子性</h2><p>操作的原子性是指，多个操作要么全部成功要么全部失败，不存在部分成功部分失败的可能。</p>
+<p>实现原子性操作的意义在于：</p>
+<ul>
+<li>操作结果更可控，有助于提升数据一致性</li>
+<li>便于故障恢复。因为操作是原子的，从故障中恢复时只需要重试该操作（如果原操作失败）或者直接跳过该操作（如果原操作成功），而不需要记录中间状态，更不需要针对中间状态作特殊处理</li>
+</ul>
+<h1 id="实现事务机制的几个阶段"><a href="#实现事务机制的几个阶段" class="headerlink" title="实现事务机制的几个阶段"></a>实现事务机制的几个阶段</h1><h2 id="幂等性发送"><a href="#幂等性发送" class="headerlink" title="幂等性发送"></a>幂等性发送</h2><p>上文提到，实现<code>Exactly Once</code>的一种方法是让下游系统具有幂等处理特性，而在Kafka Stream中，Kafka Producer本身就是“下游”系统，因此如果能让Producer具有幂等处理特性，那就可以让Kafka Stream在一定程度上支持<code>Exactly once</code>语义。</p>
+<p>为了实现Producer的幂等语义，Kafka引入了<code>Producer ID</code>（即<code>PID</code>）和<code>Sequence Number</code>。每个新的Producer在初始化的时候会被分配一个唯一的PID，该PID对用户完全透明而不会暴露给用户。</p>
+<p>对于每个PID，该Producer发送数据的每个<code>&lt;Topic, Partition&gt;</code>都对应一个从0开始单调递增的<code>Sequence Number</code>。</p>
+<p>类似地，Broker端也会为每个<code>&lt;PID, Topic, Partition&gt;</code>维护一个序号，并且每次Commit一条消息时将其对应序号递增。对于接收的每条消息，如果其序号比Broker维护的序号（即最后一次Commit的消息的序号）大一，则Broker会接受它，否则将其丢弃：</p>
+<ul>
+<li>如果消息序号比Broker维护的序号大一以上，说明中间有数据尚未写入，也即乱序，此时Broker拒绝该消息，Producer抛出<code>InvalidSequenceNumber</code></li>
+<li>如果消息序号小于等于Broker维护的序号，说明该消息已被保存，即为重复消息，Broker直接丢弃该消息，Producer抛出<code>DuplicateSequenceNumber</code></li>
+</ul>
+<p>上述设计解决了0.11.0.0之前版本中的两个问题：</p>
+<ul>
+<li>Broker保存消息后，发送ACK前宕机，Producer认为消息未发送成功并重试，造成数据重复</li>
+<li>前一条消息发送失败，后一条消息发送成功，前一条消息重试后成功，造成数据乱序</li>
+</ul>
+<h2 id="事务性保证"><a href="#事务性保证" class="headerlink" title="事务性保证"></a>事务性保证</h2><p>上述幂等设计只能保证单个Producer对于同一个<code>&lt;Topic, Partition&gt;</code>的<code>Exactly Once</code>语义。</p>
+<p>另外，它并不能保证写操作的原子性——即多个写操作，要么全部被Commit要么全部不被Commit。</p>
+<p>更不能保证多个读写操作的的原子性。尤其对于Kafka Stream应用而言，典型的操作即是从某个Topic消费数据，经过一系列转换后写回另一个Topic，保证从源Topic的读取与向目标Topic的写入的原子性有助于从故障中恢复。</p>
+<p>事务保证可使得应用程序将生产数据和消费数据当作一个原子单元来处理，要么全部成功，要么全部失败，即使该生产或消费跨多个<code>&lt;Topic, Partition&gt;</code>。</p>
+<p>另外，有状态的应用也可以保证重启后从断点处继续处理，也即事务恢复。</p>
+<p>为了实现这种效果，应用程序必须提供一个稳定的（重启后不变）唯一的ID，也即<code>Transaction ID</code>。<code>Transactin ID</code>与<code>PID</code>可能一一对应。区别在于<code>Transaction ID</code>由用户提供，而<code>PID</code>是内部的实现对用户透明。</p>
+<p>另外，为了保证新的Producer启动后，旧的具有相同<code>Transaction ID</code>的Producer即失效，每次Producer通过<code>Transaction ID</code>拿到PID的同时，还会获取一个单调递增的epoch。由于旧的Producer的epoch比新Producer的epoch小，Kafka可以很容易识别出该Producer是老的Producer并拒绝其请求。</p>
+<p>有了<code>Transaction ID</code>后，Kafka可保证：</p>
+<ul>
+<li>跨Session的数据幂等发送。当具有相同<code>Transaction ID</code>的新的Producer实例被创建且工作时，旧的且拥有相同<code>Transaction ID</code>的Producer将不再工作。</li>
+<li>跨Session的事务恢复。如果某个应用实例宕机，新的实例可以保证任何未完成的旧的事务要么Commit要么Abort，使得新实例从一个正常状态开始工作。</li>
+</ul>
+<p>需要注意的是，上述的事务保证是从Producer的角度去考虑的。从Consumer的角度来看，该保证会相对弱一些。尤其是不能保证所有被某事务Commit过的所有消息都被一起消费，因为：</p>
+<ul>
+<li>对于压缩的Topic而言，同一事务的某些消息可能被其它版本覆盖</li>
+<li>事务包含的消息可能分布在多个Segment中（即使在同一个Partition内），当老的Segment被删除时，该事务的部分数据可能会丢失</li>
+<li>Consumer在一个事务内可能通过seek方法访问任意Offset的消息，从而可能丢失部分消息</li>
+<li>Consumer可能并不需要消费某一事务内的所有Partition，因此它将永远不会读取组成该事务的所有消息</li>
+</ul>
+<h1 id="事务机制原理"><a href="#事务机制原理" class="headerlink" title="事务机制原理"></a>事务机制原理</h1><h2 id="事务性消息传递"><a href="#事务性消息传递" class="headerlink" title="事务性消息传递"></a>事务性消息传递</h2><p>这一节所说的事务主要指原子性，也即Producer将多条消息作为一个事务批量发送，要么全部成功要么全部失败。</p>
+<p>为了实现这一点，Kafka 0.11.0.0引入了一个服务器端的模块，名为<code>Transaction Coordinator</code>，用于管理Producer发送的消息的事务性。</p>
+<p>该<code>Transaction Coordinator</code>维护<code>Transaction Log</code>，该log存于一个内部的Topic内。由于Topic数据具有持久性，因此事务的状态也具有持久性。</p>
+<p>Producer并不直接读写<code>Transaction Log</code>，它与<code>Transaction Coordinator</code>通信，然后由<code>Transaction Coordinator</code>将该事务的状态插入相应的<code>Transaction Log</code>。</p>
+<p><code>Transaction Log</code>的设计与<code>Offset Log</code>用于保存Consumer的Offset类似。</p>
+<h2 id="事务中Offset的提交"><a href="#事务中Offset的提交" class="headerlink" title="事务中Offset的提交"></a>事务中Offset的提交</h2><p>许多基于Kafka的应用，尤其是Kafka Stream应用中同时包含Consumer和Producer，前者负责从Kafka中获取消息，后者负责将处理完的数据写回Kafka的其它Topic中。</p>
+<p>为了实现该场景下的事务的原子性，Kafka需要保证对Consumer Offset的Commit与Producer对发送消息的Commit包含在同一个事务中。否则，如果在二者Commit中间发生异常，根据二者Commit的顺序可能会造成数据丢失和数据重复：</p>
+<ul>
+<li>如果先Commit Producer发送数据的事务再Commit Consumer的Offset，即<code>At Least Once</code>语义，可能造成数据重复。</li>
+<li>如果先Commit Consumer的Offset，再Commit Producer数据发送事务，即<code>At Most Once</code>语义，可能造成数据丢失。</li>
+</ul>
+<h2 id="用于事务特性的控制型消息"><a href="#用于事务特性的控制型消息" class="headerlink" title="用于事务特性的控制型消息"></a>用于事务特性的控制型消息</h2><p>为了区分写入Partition的消息被Commit还是Abort，Kafka引入了一种特殊类型的消息，即<code>Control Message</code>。该类消息的Value内不包含任何应用相关的数据，并且不会暴露给应用程序。它只用于Broker与Client间的内部通信。</p>
+<p>对于Producer端事务，Kafka以Control Message的形式引入一系列的<code>Transaction Marker</code>。Consumer即可通过该标记判定对应的消息被Commit了还是Abort了，然后结合该Consumer配置的隔离级别决定是否应该将该消息返回给应用程序。</p>
+<h2 id="事务处理样例代码"><a href="#事务处理样例代码" class="headerlink" title="事务处理样例代码"></a>事务处理样例代码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">Producer&lt;String, String&gt; producer = <span class="keyword">new</span> KafkaProducer&lt;String, String&gt;(props);</span><br><span class="line">    </span><br><span class="line"><span class="comment">// 初始化事务，包括结束该Transaction ID对应的未完成的事务（如果有）</span></span><br><span class="line"><span class="comment">// 保证新的事务在一个正确的状态下启动</span></span><br><span class="line">producer.initTransactions();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 开始事务</span></span><br><span class="line">producer.beginTransaction();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 消费数据</span></span><br><span class="line">ConsumerRecords&lt;String, String&gt; records = consumer.poll(<span class="number">100</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>&#123;</span><br><span class="line">    <span class="comment">// 发送数据</span></span><br><span class="line">    producer.send(<span class="keyword">new</span> ProducerRecord&lt;String, String&gt;(<span class="string">"Topic"</span>, <span class="string">"Key"</span>, <span class="string">"Value"</span>));</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 发送消费数据的Offset，将上述数据消费与数据发送纳入同一个Transaction内</span></span><br><span class="line">    producer.sendOffsetsToTransaction(offsets, <span class="string">"group1"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 数据发送及Offset发送均成功的情况下，提交事务</span></span><br><span class="line">    producer.commitTransaction();</span><br><span class="line">&#125; <span class="keyword">catch</span> (ProducerFencedException | OutOfOrderSequenceException | AuthorizationException e) &#123;</span><br><span class="line">    <span class="comment">// 数据发送或者Offset发送出现异常时，终止事务</span></span><br><span class="line">    producer.abortTransaction();</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="comment">// 关闭Producer和Consumer</span></span><br><span class="line">    producer.close();</span><br><span class="line">    consumer.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="完整事务过程"><a href="#完整事务过程" class="headerlink" title="完整事务过程"></a>完整事务过程</h2><p><img src="http://www.jasongj.com/img/kafka/KafkaColumn8/KafkaTransaction.png" alt="Kafka Transaction"></p>
+<h3 id="找到Transaction-Coordinator"><a href="#找到Transaction-Coordinator" class="headerlink" title="找到Transaction Coordinator"></a>找到<code>Transaction Coordinator</code></h3><p>由于<code>Transaction Coordinator</code>是分配PID和管理事务的核心，因此Producer要做的第一件事情就是通过向任意一个Broker发送<code>FindCoordinator</code>请求找到<code>Transaction Coordinator</code>的位置。</p>
+<p>注意：只有应用程序为Producer配置了<code>Transaction ID</code>时才可使用事务特性，也才需要这一步。另外，由于事务性要求Producer开启幂等特性，因此通过将<code>transactional.id</code>设置为非空从而开启事务特性的同时也需要通过将<code>enable.idempotence</code>设置为true来开启幂等特性。</p>
+<h3 id="获取PID"><a href="#获取PID" class="headerlink" title="获取PID"></a>获取PID</h3><p>找到<code>Transaction Coordinator</code>后，具有幂等特性的Producer必须发起<code>InitPidRequest</code>请求以获取PID。</p>
+<p>注意：只要开启了幂等特性即必须执行该操作，而无须考虑该Producer是否开启了事务特性。</p>
+<p><strong><em> 如果事务特性被开启 </em></strong><br><code>InitPidRequest</code>会发送给<code>Transaction Coordinator</code>。如果<code>Transaction Coordinator</code>是第一次收到包含有该<code>Transaction ID</code>的InitPidRequest请求，它将会把该<code>&lt;TransactionID, PID&gt;</code>存入<code>Transaction Log</code>，如上图中步骤2.1所示。这样可保证该对应关系被持久化，从而保证即使<code>Transaction Coordinator</code>宕机该对应关系也不会丢失。</p>
+<p>除了返回PID外，<code>InitPidRequest</code>还会执行如下任务：</p>
+<ul>
+<li>增加该PID对应的epoch。具有相同PID但epoch小于该epoch的其它Producer（如果有）新开启的事务将被拒绝。</li>
+<li>恢复（Commit或Abort）之前的Producer未完成的事务（如果有）。</li>
+</ul>
+<p>注意：<code>InitPidRequest</code>的处理过程是同步阻塞的。一旦该调用正确返回，Producer即可开始新的事务。</p>
+<p>另外，如果事务特性未开启，<code>InitPidRequest</code>可发送至任意Broker，并且会得到一个全新的唯一的PID。该Producer将只能使用幂等特性以及单一Session内的事务特性，而不能使用跨Session的事务特性。</p>
+<h3 id="开启事务"><a href="#开启事务" class="headerlink" title="开启事务"></a>开启事务</h3><p>Kafka从0.11.0.0版本开始，提供<code>beginTransaction()</code>方法用于开启一个事务。调用该方法后，Producer本地会记录已经开启了事务，但<code>Transaction Coordinator</code>只有在Producer发送第一条消息后才认为事务已经开启。</p>
+<h3 id="Consume-Transform-Produce"><a href="#Consume-Transform-Produce" class="headerlink" title="Consume-Transform-Produce"></a>Consume-Transform-Produce</h3><p>这一阶段，包含了整个事务的数据处理过程，并且包含了多种请求。</p>
+<p><strong><em>AddPartitionsToTxnRequest</em></strong><br>一个Producer可能会给多个<code>&lt;Topic, Partition&gt;</code>发送数据，给一个新的<code>&lt;Topic, Partition&gt;</code>发送数据前，它需要先向<code>Transaction Coordinator</code>发送<code>AddPartitionsToTxnRequest</code>。</p>
+<p><code>Transaction Coordinator</code>会将该<code>&lt;Transaction, Topic, Partition&gt;</code>存于<code>Transaction Log</code>内，并将其状态置为<code>BEGIN</code>，如上图中步骤4.1所示。有了该信息后，我们才可以在后续步骤中为每个<code>Topic, Partition&gt;</code>设置COMMIT或者ABORT标记（如上图中步骤5.2所示）。</p>
+<p>另外，如果该<code>&lt;Topic, Partition&gt;</code>为该事务中第一个<code>&lt;Topic, Partition&gt;</code>，<code>Transaction Coordinator</code>还会启动对该事务的计时（每个事务都有自己的超时时间）。</p>
+<p><strong><em>ProduceRequest</em></strong><br>Producer通过一个或多个<code>ProduceRequest</code>发送一系列消息。除了应用数据外，该请求还包含了PID，epoch，和<code>Sequence Number</code>。该过程如上图中步骤4.2所示。</p>
+<p><strong><em>AddOffsetsToTxnRequest</em></strong><br>为了提供事务性，Producer新增了<code>sendOffsetsToTransaction</code>方法，该方法将多组消息的发送和消费放入同一批处理内。</p>
+<p>该方法先判断在当前事务中该方法是否已经被调用并传入了相同的Group ID。若是，直接跳到下一步；若不是，则向<code>Transaction Coordinator</code>发送<code>AddOffsetsToTxnRequests</code>请求，<code>Transaction Coordinator</code>将对应的所有<code>&lt;Topic, Partition&gt;</code>存于<code>Transaction Log</code>中，并将其状态记为<code>BEGIN</code>，如上图中步骤4.3所示。该方法会阻塞直到收到响应。</p>
+<p><strong><em>TxnOffsetCommitRequest</em></strong><br>作为<code>sendOffsetsToTransaction</code>方法的一部分，在处理完<code>AddOffsetsToTxnRequest</code>后，Producer也会发送<code>TxnOffsetCommit</code>请求给<code>Consumer Coordinator</code>从而将本事务包含的与读操作相关的各<code>&lt;Topic, Partition&gt;</code>的Offset持久化到内部的<code>__consumer_offsets</code>中，如上图步骤4.4所示。</p>
+<p>在此过程中，<code>Consumer Coordinator</code>会通过PID和对应的epoch来验证是否应该允许该Producer的该请求。</p>
+<p>这里需要注意：</p>
+<ul>
+<li>写入<code>__consumer_offsets</code>的Offset信息在当前事务Commit前对外是不可见的。也即在当前事务被Commit前，可认为该Offset尚未Commit，也即对应的消息尚未被完成处理。</li>
+<li><code>Consumer Coordinator</code>并不会立即更新缓存中相应<code>&lt;Topic, Partition&gt;</code>的Offset，因为此时这些更新操作尚未被COMMIT或ABORT。</li>
+</ul>
+<h3 id="Commit或Abort事务"><a href="#Commit或Abort事务" class="headerlink" title="Commit或Abort事务"></a>Commit或Abort事务</h3><p>一旦上述数据写入操作完成，应用程序必须调用<code>KafkaProducer</code>的<code>commitTransaction</code>方法或者<code>abortTransaction</code>方法以结束当前事务。</p>
+<p><strong><em>EndTxnRequest</em></strong><br><code>commitTransaction</code>方法使得Producer写入的数据对下游Consumer可见。<code>abortTransaction</code>方法通过<code>Transaction Marker</code>将Producer写入的数据标记为<code>Aborted</code>状态。下游的Consumer如果将<code>isolation.level</code>设置为<code>READ_COMMITTED</code>，则它读到被Abort的消息后直接将其丢弃而不会返回给客户程序，也即被Abort的消息对应用程序不可见。</p>
+<p>无论是Commit还是Abort，Producer都会发送<code>EndTxnRequest</code>请求给<code>Transaction Coordinator</code>，并通过标志位标识是应该Commit还是Abort。</p>
+<p>收到该请求后，<code>Transaction Coordinator</code>会进行如下操作</p>
+<ol>
+<li>将<code>PREPARE_COMMIT</code>或<code>PREPARE_ABORT</code>消息写入<code>Transaction Log</code>，如上图中步骤5.1所示</li>
+<li>通过<code>WriteTxnMarker</code>请求以<code>Transaction Marker</code>的形式将<code>COMMIT</code>或<code>ABORT</code>信息写入用户数据日志以及<code>Offset Log</code>中，如上图中步骤5.2所示</li>
+<li>最后将<code>COMPLETE_COMMIT</code>或<code>COMPLETE_ABORT</code>信息写入<code>Transaction Log</code>中，如上图中步骤5.3所示</li>
+</ol>
+<p>补充说明：对于<code>commitTransaction</code>方法，它会在发送<code>EndTxnRequest</code>之前先调用flush方法以确保所有发送出去的数据都得到相应的ACK。对于<code>abortTransaction</code>方法，在发送<code>EndTxnRequest</code>之前直接将当前Buffer中的事务性消息（如果有）全部丢弃，但必须等待所有被发送但尚未收到ACK的消息发送完成。</p>
+<p>上述第二步是实现将一组读操作与写操作作为一个事务处理的关键。因为Producer写入的数据Topic以及记录Comsumer Offset的Topic会被写入相同的<code>Transactin Marker</code>，所以这一组读操作与写操作要么全部COMMIT要么全部ABORT。</p>
+<p><strong><em>WriteTxnMarkerRequest</em></strong><br>上面提到的<code>WriteTxnMarkerRequest</code>由<code>Transaction Coordinator</code>发送给当前事务涉及到的每个<code>&lt;Topic, Partition&gt;</code>的Leader。收到该请求后，对应的Leader会将对应的<code>COMMIT(PID)</code>或者<code>ABORT(PID)</code>控制信息写入日志，如上图中步骤5.2所示。</p>
+<p>该控制消息向Broker以及Consumer表明对应PID的消息被Commit了还是被Abort了。</p>
+<p>这里要注意，如果事务也涉及到<code>__consumer_offsets</code>，即该事务中有消费数据的操作且将该消费的Offset存于<code>__consumer_offsets</code>中，<code>Transaction Coordinator</code>也需要向该内部Topic的各Partition的Leader发送<code>WriteTxnMarkerRequest</code>从而写入<code>COMMIT(PID)</code>或<code>COMMIT(PID)</code>控制信息。</p>
+<p><strong><em>写入最终的<code>COMPLETE_COMMIT</code>或<code>COMPLETE_ABORT</code>消息</em></strong><br>写完所有的<code>Transaction Marker</code>后，<code>Transaction Coordinator</code>会将最终的<code>COMPLETE_COMMIT</code>或<code>COMPLETE_ABORT</code>消息写入<code>Transaction Log</code>中以标明该事务结束，如上图中步骤5.3所示。</p>
+<p>此时，<code>Transaction Log</code>中所有关于该事务的消息全部可以移除。当然，由于Kafka内数据是Append Only的，不可直接更新和删除，这里说的移除只是将其标记为null从而在Log Compact时不再保留。</p>
+<p>另外，<code>COMPLETE_COMMIT</code>或<code>COMPLETE_ABORT</code>的写入并不需要得到所有Rreplica的ACK，因为如果该消息丢失，可以根据事务协议重发。</p>
+<p>补充说明，如果参与该事务的某些<code>&lt;Topic, Partition&gt;</code>在被写入<code>Transaction Marker</code>前不可用，它对<code>READ_COMMITTED</code>的Consumer不可见，但不影响其它可用<code>&lt;Topic, Partition&gt;</code>的COMMIT或ABORT。在该<code>&lt;Topic, Partition&gt;</code>恢复可用后，<code>Transaction Coordinator</code>会重新根据<code>PREPARE_COMMIT</code>或<code>PREPARE_ABORT</code>向该<code>&lt;Topic, Partition&gt;</code>发送<code>Transaction Marker</code>。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li><code>PID</code>与<code>Sequence Number</code>的引入实现了写操作的幂等性</li>
+<li>写操作的幂等性结合<code>At Least Once</code>语义实现了单一Session内的<code>Exactly Once</code>语义</li>
+<li><code>Transaction Marker</code>与<code>PID</code>提供了识别消息是否应该被读取的能力，从而实现了事务的隔离性</li>
+<li>Offset的更新标记了消息是否被读取，从而将对读操作的事务处理转换成了对写（Offset）操作的事务处理</li>
+<li>Kafka事务的本质是，将一组写操作（如果有）对应的消息与一组读操作（如果有）对应的Offset的更新进行同样的标记（即<code>Transaction Marker</code>）来实现事务中涉及的所有读写操作同时对外可见或同时对外不可见</li>
+<li>Kafka只提供对Kafka本身的读写操作的事务性，不提供包含外部系统的事务性</li>
+</ul>
+<h1 id="异常处理"><a href="#异常处理" class="headerlink" title="异常处理"></a>异常处理</h1><h2 id="Exception处理"><a href="#Exception处理" class="headerlink" title="Exception处理"></a>Exception处理</h2><p><strong><em>InvalidProducerEpoch</em></strong><br>这是一种Fatal Error，它说明当前Producer是一个过期的实例，有<code>Transaction ID</code>相同但epoch更新的Producer实例被创建并使用。此时Producer会停止并抛出Exception。</p>
+<p><strong><em>InvalidPidMapping</em></strong><br><code>Transaction Coordinator</code>没有与该<code>Transaction ID</code>对应的PID。此时Producer会通过包含有<code>Transaction ID</code>的<code>InitPidRequest</code>请求创建一个新的PID。</p>
+<p><strong><em>NotCorrdinatorForGTransactionalId</em></strong><br>该<code>Transaction Coordinator</code>不负责该当前事务。Producer会通过<code>FindCoordinatorRequest</code>请求重新寻找对应的<code>Transaction Coordinator</code>。</p>
+<p><strong><em>InvalidTxnRequest</em></strong><br>违反了事务协议。正确的Client实现不应该出现这种Exception。如果该异常发生了，用户需要检查自己的客户端实现是否有问题。</p>
+<p><strong><em>CoordinatorNotAvailable</em></strong><br><code>Transaction Coordinator</code>仍在初始化中。Producer只需要重试即可。</p>
+<p><strong><em>DuplicateSequenceNumber</em></strong><br>发送的消息的序号低于Broker预期。该异常说明该消息已经被成功处理过，Producer可以直接忽略该异常并处理下一条消息</p>
+<p><strong><em>InvalidSequenceNumber</em></strong><br>这是一个Fatal Error，它说明发送的消息中的序号大于Broker预期。此时有两种可能</p>
+<ul>
+<li>数据乱序。比如前面的消息发送失败后重试期间，新的消息被接收。正常情况下不应该出现该问题，因为当幂等发送启用时，<code>max.inflight.requests.per.connection</code>被强制设置为1，而<code>acks</code>被强制设置为all。故前面消息重试期间，后续消息不会被发送，也即不会发生乱序。并且只有ISR中所有Replica都ACK，Producer才会认为消息已经被发送，也即不存在Broker端数据丢失问题。</li>
+<li>服务器由于日志被Truncate而造成数据丢失。此时应该停止Producer并将此Fatal Error报告给用户。</li>
+</ul>
+<p><strong><em>InvalidTransactionTimeout</em></strong><br><code>InitPidRequest</code>调用出现的Fatal Error。它表明Producer传入的timeout时间不在可接受范围内，应该停止Producer并报告给用户。</p>
+<h2 id="处理Transaction-Coordinator失败"><a href="#处理Transaction-Coordinator失败" class="headerlink" title="处理Transaction Coordinator失败"></a>处理<code>Transaction Coordinator</code>失败</h2><h3 id="写PREPARE-COMMIT-PREPARE-ABORT前失败"><a href="#写PREPARE-COMMIT-PREPARE-ABORT前失败" class="headerlink" title="写PREPARE_COMMIT/PREPARE_ABORT前失败"></a>写<code>PREPARE_COMMIT/PREPARE_ABORT</code>前失败</h3><p>Producer通过<code>FindCoordinatorRequest</code>找到新的<code>Transaction Coordinator</code>，并通过<code>EndTxnRequest</code>请求发起<code>COMMIT</code>或<code>ABORT</code>流程，新的<code>Transaction Coordinator</code>继续处理<code>EndTxnRequest</code>请求——写<code>PREPARE_COMMIT</code>或<code>PREPARE_ABORT</code>，写<code>Transaction Marker</code>，写<code>COMPLETE_COMMIT</code>或<code>COMPLETE_ABORT</code>。</p>
+<h3 id="写完PREPARE-COMMIT-PREPARE-ABORT后失败"><a href="#写完PREPARE-COMMIT-PREPARE-ABORT后失败" class="headerlink" title="写完PREPARE_COMMIT/PREPARE_ABORT后失败"></a>写完<code>PREPARE_COMMIT/PREPARE_ABORT</code>后失败</h3><p>此时旧的<code>Transaction Coordinator</code>可能已经成功写入部分<code>Transaction Marker</code>。新的<code>Transaction Coordinator</code>会重复这些操作，所以部分Partition中可能会存在重复的<code>COMMIT</code>或<code>ABORT</code>，但只要该Producer在此期间没有发起新的事务，这些重复的<code>Transaction Marker</code>就不是问题。</p>
+<h3 id="写完COMPLETE-COMMIT-ABORT后失败"><a href="#写完COMPLETE-COMMIT-ABORT后失败" class="headerlink" title="写完COMPLETE_COMMIT/ABORT后失败"></a>写完<code>COMPLETE_COMMIT/ABORT</code>后失败</h3><p>旧的<code>Transaction Coordinator</code>可能已经写完了<code>COMPLETE_COMMIT</code>或<code>COMPLETE_ABORT</code>但在返回<code>EndTxnRequest</code>之前失败。该场景下，新的<code>Transaction Coordinator</code>会直接给Producer返回成功。</p>
+<h2 id="事务过期机制"><a href="#事务过期机制" class="headerlink" title="事务过期机制"></a>事务过期机制</h2><h3 id="事务超时"><a href="#事务超时" class="headerlink" title="事务超时"></a>事务超时</h3><p><code>transaction.timeout.ms</code></p>
+<h3 id="终止过期事务"><a href="#终止过期事务" class="headerlink" title="终止过期事务"></a>终止过期事务</h3><p>当Producer失败时，<code>Transaction Coordinator</code>必须能够主动的让某些进行中的事务过期。否则没有Producer的参与，<code>Transaction Coordinator</code>无法判断这些事务应该如何处理，这会造成：</p>
+<ul>
+<li>如果这种进行中事务太多，会造成<code>Transaction Coordinator</code>需要维护大量的事务状态，大量占用内存</li>
+<li><code>Transaction Log</code>内也会存在大量数据，造成新的<code>Transaction Coordinator</code>启动缓慢</li>
+<li><code>READ_COMMITTED</code>的Consumer需要缓存大量的消息，造成不必要的内存浪费甚至是OOM</li>
+<li>如果多个<code>Transaction ID</code>不同的Producer交叉写同一个Partition，当一个Producer的事务状态不更新时，<code>READ_COMMITTED</code>的Consumer为了保证顺序消费而被阻塞</li>
+</ul>
+<p>为了避免上述问题，<code>Transaction Coordinator</code>会周期性遍历内存中的事务状态Map，并执行如下操作</p>
+<ul>
+<li>如果状态是<code>BEGIN</code>并且其最后更新时间与当前时间差大于<code>transaction.remove.expired.transaction.cleanup.interval.ms</code>（默认值为1小时），则主动将其终止：1）未避免原Producer临时恢复与当前终止流程冲突，增加该Producer对应的PID的epoch，并确保将该更新的信息写入<code>Transaction Log</code>；2）以更新后的epoch回滚事务，从而使得该事务相关的所有Broker都更新其缓存的该PID的epoch从而拒绝旧Producer的写操作</li>
+<li>如果状态是<code>PREPARE_COMMIT</code>，完成后续的COMMIT流程————向各<code>&lt;Topic, Partition&gt;</code>写入<code>Transaction Marker</code>，在<code>Transaction Log</code>内写入<code>COMPLETE_COMMIT</code></li>
+<li>如果状态是<code>PREPARE_ABORT</code>，完成后续ABORT流程</li>
+</ul>
+<h3 id="终止Transaction-ID"><a href="#终止Transaction-ID" class="headerlink" title="终止Transaction ID"></a>终止<code>Transaction ID</code></h3><p>某<code>Transaction ID</code>的Producer可能很长时间不再发送数据，<code>Transaction Coordinator</code>没必要再保存该<code>Transaction ID</code>与<code>PID</code>等的映射，否则可能会造成大量的资源浪费。因此需要有一个机制探测不再活跃的<code>Transaction ID</code>并将其信息删除。</p>
+<p><code>Transaction Coordinator</code>会周期性遍历内存中的<code>Transaction ID</code>与<code>PID</code>映射，如果某<code>Transaction ID</code>没有对应的正在进行中的事务并且它对应的最后一个事务的结束时间与当前时间差大于<code>transactional.id.expiration.ms</code>（默认值是7天），则将其从内存中删除并在<code>Transaction Log</code>中将其对应的日志的值设置为null从而使得Log Compact可将其记录删除。</p>
+<h1 id="与其它系统事务机制对比"><a href="#与其它系统事务机制对比" class="headerlink" title="与其它系统事务机制对比"></a>与其它系统事务机制对比</h1><h2 id="PostgreSQL-MVCC"><a href="#PostgreSQL-MVCC" class="headerlink" title="PostgreSQL MVCC"></a>PostgreSQL MVCC</h2><p>Kafka的事务机制与《<a href="/sql/mvcc/">MVCC PostgreSQL实现事务和多版本并发控制的精华</a>》一文中介绍的PostgreSQL通过MVCC实现事务的机制非常类似，对于事务的回滚，并不需要删除已写入的数据，都是将写入数据的事务标记为Rollback/Abort从而在读数据时过滤该数据。</p>
+<h2 id="两阶段提交"><a href="#两阶段提交" class="headerlink" title="两阶段提交"></a>两阶段提交</h2><p>Kafka的事务机制与《<a href="/big_data/two_phase_commit/#两阶段提交原理">分布式事务（一）两阶段提交及JTA</a>》一文中所介绍的两阶段提交机制看似相似，都分PREPARE阶段和最终COMMIT阶段，但又有很大不同。</p>
+<ul>
+<li>Kafka事务机制中，PREPARE时即要指明是<code>PREPARE_COMMIT</code>还是<code>PREPARE_ABORT</code>，并且只须在<code>Transaction Log</code>中标记即可，无须其它组件参与。而两阶段提交的PREPARE需要发送给所有的分布式事务参与方，并且事务参与方需要尽可能准备好，并根据准备情况返回<code>Prepared</code>或<code>Non-Prepared</code>状态给事务管理器。</li>
+<li>Kafka事务中，一但发起<code>PREPARE_COMMIT</code>或<code>PREPARE_ABORT</code>，则确定该事务最终的结果应该是被<code>COMMIT</code>或<code>ABORT</code>。而分布式事务中，PREPARE后由各事务参与方返回状态，只有所有参与方均返回<code>Prepared</code>状态才会真正执行COMMIT，否则执行ROLLBACK</li>
+<li>Kafka事务机制中，某几个Partition在COMMIT或ABORT过程中变为不可用，只影响该Partition不影响其它Partition。两阶段提交中，若唯一收到COMMIT命令参与者Crash，其它事务参与方无法判断事务状态从而使得整个事务阻塞</li>
+<li>Kafka事务机制引入事务超时机制，有效避免了挂起的事务影响其它事务的问题</li>
+<li>Kafka事务机制中存在多个<code>Transaction Coordinator</code>实例，而分布式事务中只有一个事务管理器</li>
+</ul>
+<h2 id="Zookeeper"><a href="#Zookeeper" class="headerlink" title="Zookeeper"></a>Zookeeper</h2><p>Zookeeper的原子广播协议与两阶段提交以及Kafka事务机制有相似之处，但又有各自的特点</p>
+<ul>
+<li>Kafka事务可COMMIT也可ABORT。而Zookeeper原子广播协议只有COMMIT没有ABORT。当然，Zookeeper不COMMIT某消息也即等效于ABORT该消息的更新。</li>
+<li>Kafka存在多个<code>Transaction Coordinator</code>实例，扩展性较好。而Zookeeper写操作只能在Leader节点进行，所以其写性能远低于读性能。</li>
+<li>Kafka事务是COMMIT还是ABORT完全取决于Producer即客户端。而Zookeeper原子广播协议中某条消息是否被COMMIT取决于是否有一大半FOLLOWER ACK该消息。</li>
+</ul>
+<h1 id="Kafka系列文章"><a href="#Kafka系列文章" class="headerlink" title="Kafka系列文章"></a>Kafka系列文章</h1><ul>
+<li><a href="//www.jasongj.com/2015/03/10/KafkaColumn1/">Kafka设计解析（一）- Kafka背景及架构介绍</a></li>
+<li><a href="//www.jasongj.com/2015/04/24/KafkaColumn2/">Kafka设计解析（二）- Kafka High Availability （上）</a></li>
+<li><a href="//www.jasongj.com/2015/06/08/KafkaColumn3/">Kafka设计解析（三）- Kafka High Availability （下）</a></li>
+<li><a href="//www.jasongj.com/2015/08/09/KafkaColumn4/">Kafka设计解析（四）- Kafka Consumer设计解析</a></li>
+<li><a href="//www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/">Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告</a></li>
+<li><a href="//www.jasongj.com/kafka/high_throughput/">Kafka设计解析（六）- Kafka高性能架构之道</a></li>
+<li><a href="//www.jasongj.com/kafka/kafka_stream/">Kafka设计解析（七）- Kafka Stream</a></li>
+<li><a href="//www.jasongj.com/kafka/transaction/">Kafka设计解析（八）- Kafka Exactly Once语义与事务机制原理</a></li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'kafka/transaction/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/ml/associationrules/" rel="next" title="机器学习（三） 关联规则R语言实战 Apriori">
+                <i class="fa fa-chevron-left"></i> 机器学习（三） 关联规则R语言实战 Apriori
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/zookeeper/distributedlock/" rel="prev" title="深入浅出Zookeeper（二） 基于Zookeeper的分布式锁与领导选举">
+                深入浅出Zookeeper（二） 基于Zookeeper的分布式锁与领导选举 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/kafka/transaction/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/kafka/transaction/'),
+                identifier: decodeURI('/kafka/transaction/'),
+                title: 'Kafka设计解析（八）- Exactly Once语义与事务机制原理',
+                slug: 'kafka/transaction/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">47</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://yuzhouwan.com/" title="博客推荐-宇宙湾" target="_blank">博客推荐-宇宙湾</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#写在前面的话"><span class="nav-number">1.</span> <span class="nav-text">写在前面的话</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#为什么要提供事务机制"><span class="nav-number">2.</span> <span class="nav-text">为什么要提供事务机制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Exactly-Once"><span class="nav-number">2.1.</span> <span class="nav-text">Exactly Once</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#操作原子性"><span class="nav-number">2.2.</span> <span class="nav-text">操作原子性</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#实现事务机制的几个阶段"><span class="nav-number">3.</span> <span class="nav-text">实现事务机制的几个阶段</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#幂等性发送"><span class="nav-number">3.1.</span> <span class="nav-text">幂等性发送</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事务性保证"><span class="nav-number">3.2.</span> <span class="nav-text">事务性保证</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#事务机制原理"><span class="nav-number">4.</span> <span class="nav-text">事务机制原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#事务性消息传递"><span class="nav-number">4.1.</span> <span class="nav-text">事务性消息传递</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事务中Offset的提交"><span class="nav-number">4.2.</span> <span class="nav-text">事务中Offset的提交</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#用于事务特性的控制型消息"><span class="nav-number">4.3.</span> <span class="nav-text">用于事务特性的控制型消息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事务处理样例代码"><span class="nav-number">4.4.</span> <span class="nav-text">事务处理样例代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#完整事务过程"><span class="nav-number">4.5.</span> <span class="nav-text">完整事务过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#找到Transaction-Coordinator"><span class="nav-number">4.5.1.</span> <span class="nav-text">找到Transaction Coordinator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取PID"><span class="nav-number">4.5.2.</span> <span class="nav-text">获取PID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#开启事务"><span class="nav-number">4.5.3.</span> <span class="nav-text">开启事务</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Consume-Transform-Produce"><span class="nav-number">4.5.4.</span> <span class="nav-text">Consume-Transform-Produce</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Commit或Abort事务"><span class="nav-number">4.5.5.</span> <span class="nav-text">Commit或Abort事务</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.6.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#异常处理"><span class="nav-number">5.</span> <span class="nav-text">异常处理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Exception处理"><span class="nav-number">5.1.</span> <span class="nav-text">Exception处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#处理Transaction-Coordinator失败"><span class="nav-number">5.2.</span> <span class="nav-text">处理Transaction Coordinator失败</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#写PREPARE-COMMIT-PREPARE-ABORT前失败"><span class="nav-number">5.2.1.</span> <span class="nav-text">写PREPARE_COMMIT/PREPARE_ABORT前失败</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#写完PREPARE-COMMIT-PREPARE-ABORT后失败"><span class="nav-number">5.2.2.</span> <span class="nav-text">写完PREPARE_COMMIT/PREPARE_ABORT后失败</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#写完COMPLETE-COMMIT-ABORT后失败"><span class="nav-number">5.2.3.</span> <span class="nav-text">写完COMPLETE_COMMIT/ABORT后失败</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事务过期机制"><span class="nav-number">5.3.</span> <span class="nav-text">事务过期机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#事务超时"><span class="nav-number">5.3.1.</span> <span class="nav-text">事务超时</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#终止过期事务"><span class="nav-number">5.3.2.</span> <span class="nav-text">终止过期事务</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#终止Transaction-ID"><span class="nav-number">5.3.3.</span> <span class="nav-text">终止Transaction ID</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#与其它系统事务机制对比"><span class="nav-number">6.</span> <span class="nav-text">与其它系统事务机制对比</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL-MVCC"><span class="nav-number">6.1.</span> <span class="nav-text">PostgreSQL MVCC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#两阶段提交"><span class="nav-number">6.2.</span> <span class="nav-text">两阶段提交</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Zookeeper"><span class="nav-number">6.3.</span> <span class="nav-text">Zookeeper</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka系列文章"><span class="nav-number">7.</span> <span class="nav-text">Kafka系列文章</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/kafka/transaction/';
+          this.page.identifier = 'kafka/transaction/';
+          this.page.title = 'kafka/transaction/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</body>
+</html>

@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文介绍了工厂方法模式的概念，优缺点，实现方式，UML类图，并介绍了工厂方法（未）遵循的OOP原则">
+<meta name="keywords" content="java,Java,java 工厂方法,设计模式,工厂方法模式,java 设计模式,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java设计模式（二） 工厂方法模式">
 <meta property="og:url" content="http://www.jasongj.com/design_pattern/factory_method/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了工厂方法模式的概念，优缺点，实现方式，UML类图，并介绍了工厂方法（未）遵循的OOP原则">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/designpattern/factorymethod/factory_method.png">
 <meta property="og:updated_time" content="2017-02-18T12:31:23.000Z">
 <meta name="twitter:card" content="summary">
@@ -453,7 +455,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  2,358
+                  2,390
                 </span>
               
 
@@ -496,8 +498,8 @@
 <li>抽象工厂（或者工厂接口），如IFactory</li>
 <li>具体工厂，如MySQLFactory，PostgreSQLFactory和OracleFactory</li>
 </ul>
-<h2 id="工厂方法模式使用方式"><a href="#工厂方法模式使用方式" class="headerlink" title="工厂方法模式使用方式"></a>工厂方法模式使用方式</h2><p>如简单工厂模式直接使用静态工厂方法创建产品对象不同，在工厂方法，客户端通过实例化具体的工厂类，并调用其创建实例接口创建具体产品类的实例。根据依赖倒置原则，具体工厂类的实例由工厂接口引用（客户端依赖于抽象工厂而非具体工厂），具体产品的实例由产品接口引用（客户端和工厂依赖于抽象产品而非具体产品）。具体调用代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.dao.IUserDao;</div><div class="line"><span class="keyword">import</span> com.jasongj.factory.IDaoFactory;</div><div class="line"><span class="keyword">import</span> com.jasongj.factory.MySQLDaoFactory;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Client</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    IDaoFactory factory = <span class="keyword">new</span> MySQLDaoFactory();</div><div class="line">    IUserDao userDao = factory.createUserDao();</div><div class="line">    userDao.getUser(<span class="string">"admin"</span>);</div><div class="line"></div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="工厂方法模式示例代码"><a href="#工厂方法模式示例代码" class="headerlink" title="工厂方法模式示例代码"></a>工厂方法模式示例代码</h2><p>本文所述工厂方法模式示例代码可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/FactoryMethodPattern/src/main" target="_blank" rel="external">作者Github</a>下载</p>
+<h2 id="工厂方法模式使用方式"><a href="#工厂方法模式使用方式" class="headerlink" title="工厂方法模式使用方式"></a>工厂方法模式使用方式</h2><p>如简单工厂模式直接使用静态工厂方法创建产品对象不同，在工厂方法，客户端通过实例化具体的工厂类，并调用其创建实例接口创建具体产品类的实例。根据依赖倒置原则，具体工厂类的实例由工厂接口引用（客户端依赖于抽象工厂而非具体工厂），具体产品的实例由产品接口引用（客户端和工厂依赖于抽象产品而非具体产品）。具体调用代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj.client;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.jasongj.dao.IUserDao;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.factory.IDaoFactory;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.factory.MySQLDaoFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Client</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    IDaoFactory factory = <span class="keyword">new</span> MySQLDaoFactory();</span><br><span class="line">    IUserDao userDao = factory.createUserDao();</span><br><span class="line">    userDao.getUser(<span class="string">"admin"</span>);</span><br><span class="line"></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="工厂方法模式示例代码"><a href="#工厂方法模式示例代码" class="headerlink" title="工厂方法模式示例代码"></a>工厂方法模式示例代码</h2><p>本文所述工厂方法模式示例代码可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/FactoryMethodPattern/src/main" target="_blank" rel="noopener">作者Github</a>下载</p>
 <h2 id="工厂方法模式优点"><a href="#工厂方法模式优点" class="headerlink" title="工厂方法模式优点"></a>工厂方法模式优点</h2><ul>
 <li>因为每个具体工厂类只负责创建产品，没有简单工厂中的逻辑判断，因此符合单一职责原则。</li>
 <li>与简单工厂模式不同，工厂方法并不使用静态工厂方法，可以形成基于继承的等级结构。</li>
@@ -737,7 +739,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -868,7 +870,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -885,7 +887,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1212,5 +1214,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="提到线程安全，可能大家的第一反应是要确保接口对共享变量的操作要具体原子性。实际上，在多线程编程中我们需要同时关注可见性、顺序性和原子性问题。本篇文章将从这三个问题出发，结合实例详解volatile如何保证可见性及一定程序上保证顺序性，同时例讲synchronized如何同时保证可见性和原子性，最后对比volatile和synchronized的适用场景。">
+<meta name="keywords" content="java,Java,注解,原子性 可见性 有序性,volatile,synchronized,lock,内存屏障,锁,java 线程安全,java 同步,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java进阶（二）当我们说线程安全时，到底在说什么">
 <meta property="og:url" content="http://www.jasongj.com/java/thread_safe/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="提到线程安全，可能大家的第一反应是要确保接口对共享变量的操作要具体原子性。实际上，在多线程编程中我们需要同时关注可见性、顺序性和原子性问题。本篇文章将从这三个问题出发，结合实例详解volatile如何保证可见性及一定程序上保证顺序性，同时例讲synchronized如何同时保证可见性和原子性，最后对比volatile和synchronized的适用场景。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2017-02-15T12:31:23.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Java进阶（二）当我们说线程安全时，到底在说什么">
@@ -440,7 +442,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  4,027
+                  4,107
                 </span>
               
 
@@ -474,14 +476,14 @@
 <p>CPU从主内存中读数据的效率相对来说不高，现在主流的计算机中，都有几级缓存。每个线程读取共享变量时，都会将该变量加载进其对应CPU的高速缓存里，修改该变量后，CPU会立即更新该缓存，但并不一定会立即将其写回主内存（实际上写回主内存的时间不可预期）。此时其它线程（尤其是不在同一个CPU上执行的线程）访问该变量时，从主内存中读到的就是旧的数据，而非第一个线程更新后的数据。</p>
 <p>这一点是操作系统或者说是硬件层面的机制，所以很多应用开发人员经常会忽略。</p>
 <h2 id="顺序性"><a href="#顺序性" class="headerlink" title="顺序性"></a>顺序性</h2><p>顺序性指的是，程序执行的顺序按照代码的先后顺序执行。</p>
-<p>以下面这段代码为例<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">boolean</span> started = <span class="keyword">false</span>; <span class="comment">// 语句1</span></div><div class="line"><span class="keyword">long</span> counter = <span class="number">0L</span>; <span class="comment">// 语句2</span></div><div class="line">counter = <span class="number">1</span>; <span class="comment">// 语句3</span></div><div class="line">started = <span class="keyword">true</span>; <span class="comment">// 语句4</span></div></pre></td></tr></table></figure></p>
+<p>以下面这段代码为例<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">boolean</span> started = <span class="keyword">false</span>; <span class="comment">// 语句1</span></span><br><span class="line"><span class="keyword">long</span> counter = <span class="number">0L</span>; <span class="comment">// 语句2</span></span><br><span class="line">counter = <span class="number">1</span>; <span class="comment">// 语句3</span></span><br><span class="line">started = <span class="keyword">true</span>; <span class="comment">// 语句4</span></span><br></pre></td></tr></table></figure></p>
 <p>从代码顺序上看，上面四条语句应该依次执行，但实际上JVM真正在执行这段代码时，并不保证它们一定完全按照此顺序执行。</p>
 <p>处理器为了提高程序整体的执行效率，可能会对代码进行优化，其中的一项优化方式就是调整代码顺序，按照更高效的顺序执行代码。</p>
 <p>讲到这里，有人要着急了——什么，CPU不按照我的代码顺序执行代码，那怎么保证得到我们想要的效果呢？实际上，大家大可放心，CPU虽然并不保证完全按照代码顺序执行，但它会保证程序最终的执行结果和代码顺序执行时的结果一致。</p>
-<h1 id="Java如何解决多线程并发问题"><a href="#Java如何解决多线程并发问题" class="headerlink" title="Java如何解决多线程并发问题"></a>Java如何解决多线程并发问题</h1><h2 id="Java如何保证原子性"><a href="#Java如何保证原子性" class="headerlink" title="Java如何保证原子性"></a>Java如何保证原子性</h2><h3 id="锁和同步"><a href="#锁和同步" class="headerlink" title="锁和同步"></a>锁和同步</h3><p>常用的保证Java操作原子性的工具是锁和同步方法（或者同步代码块）。使用锁，可以保证同一时间只有一个线程能拿到锁，也就保证了同一时间只有一个线程能执行申请锁和释放锁之间的代码。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testLock</span> <span class="params">()</span> </span>&#123;</div><div class="line">  lock.lock();</div><div class="line">  <span class="keyword">try</span>&#123;</div><div class="line">    <span class="keyword">int</span> j = i;</div><div class="line">    i = j + <span class="number">1</span>;</div><div class="line">  &#125; <span class="keyword">finally</span> &#123;</div><div class="line">    lock.unlock();</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>与锁类似的是同步方法或者同步代码块。使用非静态同步方法时，锁住的是当前实例；使用静态同步方法时，锁住的是该类的Class对象；使用静态代码块时，锁住的是<code>synchronized</code>关键字后面括号内的对象。下面是同步代码块示例<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testLock</span> <span class="params">()</span> </span>&#123;</div><div class="line">  <span class="keyword">synchronized</span> (anyObject)&#123;</div><div class="line">    <span class="keyword">int</span> j = i;</div><div class="line">    i = j + <span class="number">1</span>;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="Java如何解决多线程并发问题"><a href="#Java如何解决多线程并发问题" class="headerlink" title="Java如何解决多线程并发问题"></a>Java如何解决多线程并发问题</h1><h2 id="Java如何保证原子性"><a href="#Java如何保证原子性" class="headerlink" title="Java如何保证原子性"></a>Java如何保证原子性</h2><h3 id="锁和同步"><a href="#锁和同步" class="headerlink" title="锁和同步"></a>锁和同步</h3><p>常用的保证Java操作原子性的工具是锁和同步方法（或者同步代码块）。使用锁，可以保证同一时间只有一个线程能拿到锁，也就保证了同一时间只有一个线程能执行申请锁和释放锁之间的代码。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testLock</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">  lock.lock();</span><br><span class="line">  <span class="keyword">try</span>&#123;</span><br><span class="line">    <span class="keyword">int</span> j = i;</span><br><span class="line">    i = j + <span class="number">1</span>;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    lock.unlock();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>与锁类似的是同步方法或者同步代码块。使用非静态同步方法时，锁住的是当前实例；使用静态同步方法时，锁住的是该类的Class对象；使用静态代码块时，锁住的是<code>synchronized</code>关键字后面括号内的对象。下面是同步代码块示例<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testLock</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">synchronized</span> (anyObject)&#123;</span><br><span class="line">    <span class="keyword">int</span> j = i;</span><br><span class="line">    i = j + <span class="number">1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>无论使用锁还是synchronized，本质都是一样，通过锁来实现资源的排它性，从而实际目标代码段同一时间只会被一个线程执行，进而保证了目标代码段的原子性。这是一种以牺牲性能为代价的方法。</p>
-<h3 id="CAS（compare-and-swap）"><a href="#CAS（compare-and-swap）" class="headerlink" title="CAS（compare and swap）"></a>CAS（compare and swap）</h3><p>基础类型变量自增（i++）是一种常被新手误以为是原子操作而实际不是的操作。Java中提供了对应的原子操作类来实现该操作，并保证原子性，其本质是利用了CPU级别的CAS指令。由于是CPU级别的指令，其开销比需要操作系统参与的锁的开销小。AtomicInteger使用方法如下。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">AtomicInteger atomicInteger = <span class="keyword">new</span> AtomicInteger();</div><div class="line"><span class="keyword">for</span>(<span class="keyword">int</span> b = <span class="number">0</span>; b &lt; numThreads; b++) &#123;</div><div class="line">  <span class="keyword">new</span> Thread(() -&gt; &#123;</div><div class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> a = <span class="number">0</span>; a &lt; iteration; a++) &#123;</div><div class="line">      atomicInteger.incrementAndGet();</div><div class="line">    &#125;</div><div class="line">  &#125;).start();</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h3 id="CAS（compare-and-swap）"><a href="#CAS（compare-and-swap）" class="headerlink" title="CAS（compare and swap）"></a>CAS（compare and swap）</h3><p>基础类型变量自增（i++）是一种常被新手误以为是原子操作而实际不是的操作。Java中提供了对应的原子操作类来实现该操作，并保证原子性，其本质是利用了CPU级别的CAS指令。由于是CPU级别的指令，其开销比需要操作系统参与的锁的开销小。AtomicInteger使用方法如下。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">AtomicInteger atomicInteger = <span class="keyword">new</span> AtomicInteger();</span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> b = <span class="number">0</span>; b &lt; numThreads; b++) &#123;</span><br><span class="line">  <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> a = <span class="number">0</span>; a &lt; iteration; a++) &#123;</span><br><span class="line">      atomicInteger.incrementAndGet();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <h2 id="Java如何保证可见性"><a href="#Java如何保证可见性" class="headerlink" title="Java如何保证可见性"></a>Java如何保证可见性</h2><p>Java提供了<code>volatile</code>关键字来保证可见性。当使用volatile修饰某个变量时，它会保证对该变量的修改会立即被更新到内存中，并且将其它缓存中对该变量的缓存设置成无效，因此其它线程需要读取该值时必须从主内存中读取，从而得到最新的值。</p>
 <h2 id="Java如何保证顺序性"><a href="#Java如何保证顺序性" class="headerlink" title="Java如何保证顺序性"></a>Java如何保证顺序性</h2><p>上文讲过编译器和处理器对指令进行重新排序时，会保证重新排序后的执行结果和代码顺序执行的结果一致，所以重新排序过程并不会影响单线程程序的执行，却可能影响多线程程序并发执行的正确性。</p>
 <p>Java中可通过<code>volatile</code>在一定程序上保证顺序性，另外还可以通过synchronized和锁来保证顺序性。</p>
@@ -497,7 +499,7 @@
 <li>线程中断规则： 对线程interrupt()方法的调用先发生于对该中断异常的获取</li>
 <li>对象终结规则：一个对象构造先于它的finalize发生</li>
 </ul>
-<h1 id="volatile适用场景"><a href="#volatile适用场景" class="headerlink" title="volatile适用场景"></a>volatile适用场景</h1><p>volatile适用于不需要保证原子性，但却需要保证可见性的场景。一种典型的使用场景是用它修饰用于停止线程的状态标记。如下所示<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">boolean</span> isRunning = <span class="keyword">false</span>;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span> <span class="params">()</span> </span>&#123;</div><div class="line">  <span class="keyword">new</span> Thread( () -&gt; &#123;</div><div class="line">    <span class="keyword">while</span>(isRunning) &#123;</div><div class="line">      someOperation();</div><div class="line">    &#125;</div><div class="line">  &#125;).start();</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">stop</span> <span class="params">()</span> </span>&#123;</div><div class="line">  isRunning = <span class="keyword">false</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="volatile适用场景"><a href="#volatile适用场景" class="headerlink" title="volatile适用场景"></a>volatile适用场景</h1><p>volatile适用于不需要保证原子性，但却需要保证可见性的场景。一种典型的使用场景是用它修饰用于停止线程的状态标记。如下所示<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">boolean</span> isRunning = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">new</span> Thread( () -&gt; &#123;</span><br><span class="line">    <span class="keyword">while</span>(isRunning) &#123;</span><br><span class="line">      someOperation();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;).start();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">stop</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">  isRunning = <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>在这种实现方式下，即使其它线程通过调用stop()方法将isRunning设置为false，循环也不一定会立即结束。可以通过volatile关键字，保证while循环及时得到isRunning最新的状态从而及时停止循环，结束线程。</p>
 <h1 id="线程安全十万个为什么"><a href="#线程安全十万个为什么" class="headerlink" title="线程安全十万个为什么"></a>线程安全十万个为什么</h1><p>问：平时项目中使用锁和synchronized比较多，而很少使用volatile，难道就没有保证可见性？<br>答：锁和synchronized即可以保证原子性，也可以保证可见性。都是通过保证同一时间只有一个线程执行目标代码段来实现的。</p>
 <p></p><p id="synchronized_visibility"><br>问：锁和synchronized为何能保证可见性？<br>答：根据<a href="http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/package-summary.html#MemoryVisibility" title="JDK 7的Java doc" target="_blank" rel="external nofollow">JDK 7的Java doc</a>中对<code>concurrent</code>包的说明，一个线程的写结果保证对另外线程的读操作可见，只要该写操作可以由<code>happen-before</code>原则推断出在读操作之前发生。<br></p><p></p>
@@ -715,7 +717,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -846,7 +848,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -863,7 +865,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1190,5 +1192,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

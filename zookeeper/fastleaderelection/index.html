@@ -76,34 +76,36 @@
 
 
 <meta name="description" content="本文介绍了Zookeeper的架构，并组合实例分析了原子广播(ZAB)协议的原理，包括但不限于Zookeeper的读写流程，FastLeaderElection算法的原理，ZAB如何保证Leader Failover过程中的数据一致性。">
+<meta name="keywords" content="zookeeper,大数据,集群,郭俊 Jason,leader election,fast leader election">
 <meta property="og:type" content="article">
 <meta property="og:title" content="深入浅出Zookeeper（一） Zookeeper架构及FastLeaderElection机制">
 <meta property="og:url" content="http://www.jasongj.com/zookeeper/fastleaderelection/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了Zookeeper的架构，并组合实例分析了原子广播(ZAB)协议的原理，包括但不限于Zookeeper的读写流程，FastLeaderElection算法的原理，ZAB如何保证Leader Failover过程中的数据一致性。">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/architecture.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/writeleader.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/writefollower.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/read.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/start_election_1.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/start_election_2.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/start_election_3.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/follower_restart_election_1.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/follower_restart_election_2.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_1.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_2.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_3.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_4.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_5.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/recovery_1.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/recovery_2.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/recovery_3.png">
-<meta property="og:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/recovery_4.png">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/architecture.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/writeleader.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/writefollower.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/read.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/start_election_1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/start_election_2.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/start_election_3.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/follower_restart_election_1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/follower_restart_election_2.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_2.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_3.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_4.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/leader_restart_election_5.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/recovery_1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/recovery_2.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/recovery_3.png">
+<meta property="og:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/recovery_4.png">
 <meta property="og:updated_time" content="2017-11-12T00:01:01.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="深入浅出Zookeeper（一） Zookeeper架构及FastLeaderElection机制">
 <meta name="twitter:description" content="本文介绍了Zookeeper的架构，并组合实例分析了原子广播(ZAB)协议的原理，包括但不限于Zookeeper的读写流程，FastLeaderElection算法的原理，ZAB如何保证Leader Failover过程中的数据一致性。">
-<meta name="twitter:image" content="http://www.jasongj.com//www.jasongj.com/img/zookeeper/1_architecture/architecture.png">
+<meta name="twitter:image" content="http://www.jasongj.com/img/zookeeper/1_architecture/architecture.png">
 
 
 
@@ -492,7 +494,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  6,279
+                  6,285
                 </span>
               
 
@@ -573,7 +575,7 @@
 
 <p>由于处理读请求不需要服务器之间的交互，Follower/Observer越多，整体可处理的读请求量越大，也即读性能越好。</p>
 <h1 id="FastLeaderElection原理"><a href="#FastLeaderElection原理" class="headerlink" title="FastLeaderElection原理"></a>FastLeaderElection原理</h1><h2 id="术语介绍"><a href="#术语介绍" class="headerlink" title="术语介绍"></a>术语介绍</h2><p><strong><em>myid</em></strong><br>每个Zookeeper服务器，都需要在数据文件夹下创建一个名为myid的文件，该文件包含整个Zookeeper集群唯一的ID（整数）。例如某Zookeeper集群包含三台服务器，hostname分别为zoo1、zoo2和zoo3，其myid分别为1、2和3，则在配置文件中其ID与hostname必须一一对应，如下所示。在该配置文件中，<code>server.</code>后面的数据即为myid</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">server.1=zoo1:2888:3888</div><div class="line">server.2=zoo2:2888:3888</div><div class="line">server.3=zoo3:2888:3888</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">server.1=zoo1:2888:3888</span><br><span class="line">server.2=zoo2:2888:3888</span><br><span class="line">server.3=zoo3:2888:3888</span><br></pre></td></tr></table></figure>
 <p><strong><em>zxid</em></strong><br>类似于RDBMS中的事务ID，用于标识一次更新操作的Proposal ID。为了保证顺序性，该zkid必须单调递增。因此Zookeeper使用一个64位的数来表示，高32位是Leader的epoch，从1开始，每次选出新的Leader，epoch加一。低32位为该epoch内的序号，每次epoch变化，都将低32位的序号重置。这样保证了zkid的全局递增性。</p>
 <h2 id="支持的领导选举算法"><a href="#支持的领导选举算法" class="headerlink" title="支持的领导选举算法"></a>支持的领导选举算法</h2><p>可通过<code>electionAlg</code>配置项设置Zookeeper用于领导选举的算法。</p>
 <p>到3.4.10版本为止，可选项有  </p>
@@ -784,13 +786,13 @@
       
         <div class="post-tags">
           
-            <a href="/tags/zookeeper/" rel="tag"># zookeeper</a>
-          
             <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
           
             <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
-            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+            <a href="/tags/zookeeper/" rel="tag"># zookeeper</a>
           
         </div>
       
@@ -812,6 +814,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/ml/associationrules/" rel="prev" title="机器学习（三） 关联规则R语言实战 Apriori">
+                机器学习（三） 关联规则R语言实战 Apriori <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -916,7 +922,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1047,7 +1053,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -1064,7 +1070,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1391,5 +1397,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

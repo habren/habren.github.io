@@ -1,0 +1,1298 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="spark,sql,RBO,基于规则的优化,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界,spark sql" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文结合案例详述了 Spark SQL 的工作原理，包括但不限于 Parser，Analyzer，Optimizer，Rule-based optimization等内容。">
+<meta name="keywords" content="spark,sql,RBO,基于规则的优化,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界,spark sql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spark SQL &#x2F; Catalyst 内部原理 与 RBO">
+<meta property="og:url" content="http://www.jasongj.com/spark/rbo/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文结合案例详述了 Spark SQL 的工作原理，包括但不限于 Parser，Analyzer，Optimizer，Rule-based optimization等内容。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_parser.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_analyzer.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_predicate_pushdown.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_constant_folding.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_column_pruning.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_physical_plan.png">
+<meta property="og:updated_time" content="2018-09-09T23:02:13.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spark SQL &#x2F; Catalyst 内部原理 与 RBO">
+<meta name="twitter:description" content="本文结合案例详述了 Spark SQL 的工作原理，包括但不限于 Parser，Analyzer，Optimizer，Rule-based optimization等内容。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/spark/rbo/"/>
+
+
+
+
+
+  <title>
+  
+    Spark SQL 内部原理 RBO Catalyst Rule-based optimization | 技术世界 | spark,sql,RBO,基于规则的优化,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界,spark sql
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/spark/rbo/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Spark SQL / Catalyst 内部原理 与 RBO
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-09-10T07:02:13+08:00">
+                2018-09-10
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-09-10T07:02:13+08:00">
+                2018-09-10
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big data</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/大数据/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/spark/rbo/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/spark/rbo/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/spark/rbo/" class="leancloud_visitors" data-flag-title="Spark SQL / Catalyst 内部原理 与 RBO">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  4,130
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文结合案例详述了 Spark SQL 的工作原理，包括但不限于 Parser，Analyzer，Optimizer，Rule-based optimization等内容。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/spark/rbo/">原文链接</a>　<a href="http://www.jasongj.com/spark/rbo/">http://www.jasongj.com/spark/rbo/</a></p>
+</blockquote>
+<blockquote>
+<p>本文所述内容均基于 2018年9月10日 Spark 最新 Release 2.3.1 版本。后续将持续更新</p>
+</blockquote>
+<h1 id="Spark-SQL-架构"><a href="#Spark-SQL-架构" class="headerlink" title="Spark SQL 架构"></a>Spark SQL 架构</h1><p>Spark SQL 的整体架构如下图所示<br><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql.png" alt="Spark SQL Catalyst"></p>
+<p>从上图可见，无论是直接使用 SQL 语句还是使用 DataFrame，都会经过如下步骤转换成 DAG 对 RDD 的操作</p>
+<ul>
+<li>Parser 解析 SQL，生成 Unresolved Logical Plan</li>
+<li>由 Analyzer 结合 Catalog 信息生成 Resolved Logical Plan</li>
+<li>Optimizer根据预先定义好的规则对 Resolved Logical Plan 进行优化并生成 Optimized Logical Plan</li>
+<li>Query Planner 将 Optimized Logical Plan 转换成多个 Physical Plan</li>
+<li>CBO 根据 Cost Model 算出每个 Physical Plan 的代价并选取代价最小的 Physical Plan 作为最终的 Physical Plan</li>
+<li>Spark 以 DAG 的方法执行上述 Physical Plan</li>
+<li>在执行 DAG 的过程中，Adaptive Execution 根据运行时信息动态调整执行计划从而提高执行效率</li>
+</ul>
+<h1 id="Parser"><a href="#Parser" class="headerlink" title="Parser"></a>Parser</h1><p>Spark SQL 使用 Antlr 进行记法和语法解析，并生成 UnresolvedPlan。</p>
+<p>当用户使用 SparkSession.sql(sqlText : String) 提交 SQL 时，SparkSession 最终会调用 SparkSqlParser 的 parsePlan 方法。该方法分两步</p>
+<ul>
+<li>使用 Antlr 生成的 SqlBaseLexer 对 SQL 进行词法分析，生成 CommonTokenStream</li>
+<li>使用 Antlr 生成的 SqlBaseParser 进行语法分析，得到 LogicalPlan</li>
+</ul>
+<p>现在两张表，分别定义如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> score (</span><br><span class="line">  <span class="keyword">id</span> <span class="built_in">INT</span>,</span><br><span class="line">  math_score <span class="built_in">INT</span>,</span><br><span class="line">  english_score <span class="built_in">INT</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> people (</span><br><span class="line">  <span class="keyword">id</span> <span class="built_in">INT</span>,</span><br><span class="line">  age <span class="built_in">INT</span>,</span><br><span class="line">  <span class="keyword">name</span> <span class="built_in">INT</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>对其进行关联查询如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="keyword">sum</span>(v)</span><br><span class="line"><span class="keyword">FROM</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> score.id,</span><br><span class="line">    <span class="number">100</span> + <span class="number">80</span> + score.math_score + score.english_score <span class="keyword">AS</span> v</span><br><span class="line">  <span class="keyword">FROM</span> people</span><br><span class="line">  <span class="keyword">JOIN</span> score</span><br><span class="line">  <span class="keyword">ON</span> people.id = score.id</span><br><span class="line">  <span class="keyword">AND</span> people.age &gt; <span class="number">10</span></span><br><span class="line">) tmp</span><br></pre></td></tr></table></figure></p>
+<p>生成的 UnresolvedPlan 如下图所示。</p>
+<p><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_parser.png" alt="Spark SQL Parser"></p>
+<p>从上图可见</p>
+<ul>
+<li>查询涉及的两张表，被解析成了两个 UnresolvedRelation，也即只知道这们是两张表，却并不知道它们是 EXTERNAL TABLE 还是 MANAGED TABLE，也不知道它们的数据存在哪儿，更不知道它们的表结构如何</li>
+<li>sum(v) 的结果未命名</li>
+<li>Project 部分只知道是选择出了属性，却并不知道这些属性属于哪张表，更不知道其数据类型</li>
+<li>Filter 部分也不知道数据类型</li>
+</ul>
+<p>Spark SQL 解析出的 UnresolvedPlan 如下所示<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">== Parsed Logical Plan ==</span><br><span class="line">'Project [unresolvedalias('sum('v), None)]</span><br><span class="line">+- 'SubqueryAlias tmp</span><br><span class="line">   +- 'Project ['score.id, (((100 + 80) + 'score.math_score) + 'score.english_score) AS v#493]</span><br><span class="line">      +- 'Filter (('people.id = 'score.id) &amp;&amp; ('people.age &gt; 10))</span><br><span class="line">         +- 'Join Inner</span><br><span class="line">            :- 'UnresolvedRelation `people`</span><br><span class="line">            +- 'UnresolvedRelation `score`</span><br></pre></td></tr></table></figure></p>
+<h1 id="Analyzer"><a href="#Analyzer" class="headerlink" title="Analyzer"></a>Analyzer</h1><p>从 Analyzer 的构造方法可见</p>
+<ul>
+<li>Analyzer 持有一个 SessionCatalog 对象的引用</li>
+<li>Analyzer 继承自 RuleExecutor[LogicalPlan]，因此可对 LogicalPlan 进行转换</li>
+</ul>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Analyzer</span>(<span class="params"></span></span></span><br><span class="line"><span class="class"><span class="params">    catalog: <span class="type">SessionCatalog</span>,</span></span></span><br><span class="line"><span class="class"><span class="params">    conf: <span class="type">SQLConf</span>,</span></span></span><br><span class="line"><span class="class"><span class="params">    maxIterations: <span class="type">Int</span></span>)</span></span><br><span class="line"><span class="class">  <span class="keyword">extends</span> <span class="title">RuleExecutor</span>[<span class="type">LogicalPlan</span>] <span class="keyword">with</span> <span class="title">CheckAnalysis</span> </span>&#123;</span><br></pre></td></tr></table></figure>
+<p>Analyzer 包含了如下的转换规则<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">lazy</span> <span class="keyword">val</span> batches: <span class="type">Seq</span>[<span class="type">Batch</span>] = <span class="type">Seq</span>(</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Hints"</span>, fixedPoint,</span><br><span class="line">      <span class="keyword">new</span> <span class="type">ResolveHints</span>.<span class="type">ResolveBroadcastHints</span>(conf),</span><br><span class="line">      <span class="type">ResolveHints</span>.<span class="type">RemoveAllHints</span>),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Simple Sanity Check"</span>, <span class="type">Once</span>,</span><br><span class="line">      <span class="type">LookupFunctions</span>),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Substitution"</span>, fixedPoint,</span><br><span class="line">      <span class="type">CTESubstitution</span>,</span><br><span class="line">      <span class="type">WindowsSubstitution</span>,</span><br><span class="line">      <span class="type">EliminateUnions</span>,</span><br><span class="line">      <span class="keyword">new</span> <span class="type">SubstituteUnresolvedOrdinals</span>(conf)),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Resolution"</span>, fixedPoint,</span><br><span class="line">      <span class="type">ResolveTableValuedFunctions</span> ::</span><br><span class="line">      <span class="type">ResolveRelations</span> ::</span><br><span class="line">      <span class="type">ResolveReferences</span> ::</span><br><span class="line">      <span class="type">ResolveCreateNamedStruct</span> ::</span><br><span class="line">      <span class="type">ResolveDeserializer</span> ::</span><br><span class="line">      <span class="type">ResolveNewInstance</span> ::</span><br><span class="line">      <span class="type">ResolveUpCast</span> ::</span><br><span class="line">      <span class="type">ResolveGroupingAnalytics</span> ::</span><br><span class="line">      <span class="type">ResolvePivot</span> ::</span><br><span class="line">      <span class="type">ResolveOrdinalInOrderByAndGroupBy</span> ::</span><br><span class="line">      <span class="type">ResolveAggAliasInGroupBy</span> ::</span><br><span class="line">      <span class="type">ResolveMissingReferences</span> ::</span><br><span class="line">      <span class="type">ExtractGenerator</span> ::</span><br><span class="line">      <span class="type">ResolveGenerate</span> ::</span><br><span class="line">      <span class="type">ResolveFunctions</span> ::</span><br><span class="line">      <span class="type">ResolveAliases</span> ::</span><br><span class="line">      <span class="type">ResolveSubquery</span> ::</span><br><span class="line">      <span class="type">ResolveSubqueryColumnAliases</span> ::</span><br><span class="line">      <span class="type">ResolveWindowOrder</span> ::</span><br><span class="line">      <span class="type">ResolveWindowFrame</span> ::</span><br><span class="line">      <span class="type">ResolveNaturalAndUsingJoin</span> ::</span><br><span class="line">      <span class="type">ExtractWindowExpressions</span> ::</span><br><span class="line">      <span class="type">GlobalAggregates</span> ::</span><br><span class="line">      <span class="type">ResolveAggregateFunctions</span> ::</span><br><span class="line">      <span class="type">TimeWindowing</span> ::</span><br><span class="line">      <span class="type">ResolveInlineTables</span>(conf) ::</span><br><span class="line">      <span class="type">ResolveTimeZone</span>(conf) ::</span><br><span class="line">      <span class="type">ResolvedUuidExpressions</span> ::</span><br><span class="line">      <span class="type">TypeCoercion</span>.typeCoercionRules(conf) ++</span><br><span class="line">      extendedResolutionRules : _*),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Post-Hoc Resolution"</span>, <span class="type">Once</span>, postHocResolutionRules: _*),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"View"</span>, <span class="type">Once</span>,</span><br><span class="line">      <span class="type">AliasViewChild</span>(conf)),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Nondeterministic"</span>, <span class="type">Once</span>,</span><br><span class="line">      <span class="type">PullOutNondeterministic</span>),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"UDF"</span>, <span class="type">Once</span>,</span><br><span class="line">      <span class="type">HandleNullInputsForUDF</span>),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"FixNullability"</span>, <span class="type">Once</span>,</span><br><span class="line">      <span class="type">FixNullability</span>),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Subquery"</span>, <span class="type">Once</span>,</span><br><span class="line">      <span class="type">UpdateOuterReferences</span>),</span><br><span class="line">    <span class="type">Batch</span>(<span class="string">"Cleanup"</span>, fixedPoint,</span><br><span class="line">      <span class="type">CleanupAliases</span>)</span><br><span class="line">  )</span><br></pre></td></tr></table></figure></p>
+<p>例如， ResolveRelations 用于分析查询用到的 Table 或 View。本例中 UnresolvedRelation (people) 与 UnresolvedRelation (score) 被解析为 HiveTableRelation (json.people) 与 HiveTableRelation (json.score)，并列出其各自包含的字段名。</p>
+<p>经 Analyzer 分析后得到的 Resolved Logical Plan 如下所示</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">== Analyzed Logical Plan ==</span><br><span class="line">sum(v): bigint</span><br><span class="line">Aggregate [sum(cast(v#493 as bigint)) AS sum(v)#504L]</span><br><span class="line">+- SubqueryAlias tmp</span><br><span class="line">   +- Project [id#500, (((100 + 80) + math_score#501) + english_score#502) AS v#493]</span><br><span class="line">      +- Filter ((id#496 = id#500) &amp;&amp; (age#497 &gt; 10))</span><br><span class="line">         +- Join Inner</span><br><span class="line">            :- SubqueryAlias people</span><br><span class="line">            :  +- HiveTableRelation `jason`.`people`, org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, [id#496, age#497, name#498]</span><br><span class="line">            +- SubqueryAlias score</span><br><span class="line">               +- HiveTableRelation `jason`.`score`, org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, [id#500, math_score#501, english_score#502]</span><br></pre></td></tr></table></figure>
+<p>Analyzer 分析前后的 LogicalPlan 对比如下</p>
+<p><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_analyzer.png" alt="Spark SQL Analyzer"></p>
+<p>由上图可见，分析后，每张表对应的字段集，字段类型，数据存储位置都已确定。Project 与 Filter 操作的字段类型以及在表中的位置也已确定。</p>
+<p>有了这些信息，已经可以直接将该 LogicalPlan 转换为 Physical Plan 进行执行。</p>
+<p>但是由于不同用户提交的 SQL 质量不同，直接执行会造成不同用户提交的语义相同的不同 SQL 执行效率差距甚远。换句话说，如果要保证较高的执行效率，用户需要做大量的 SQL 优化，使用体验大大降低。</p>
+<p>为了尽可能保证无论用户是否熟悉 SQL 优化，提交的 SQL 质量如何， Spark SQL 都能以较高效率执行，还需在执行前进行 LogicalPlan 优化。</p>
+<h1 id="Optimizer"><a href="#Optimizer" class="headerlink" title="Optimizer"></a>Optimizer</h1><p>Spark SQL 目前的优化主要是基于规则的优化，即 RBO （Rule-based optimization）</p>
+<ul>
+<li>每个优化以 Rule 的形式存在，每条 Rule 都是对 Analyzed Plan 的等价转换</li>
+<li>RBO 设计良好，易于扩展，新的规则可以非常方便地嵌入进 Optimizer</li>
+<li>RBO 目前已经足够好，但仍然需要更多规则来 cover 更多的场景</li>
+<li>优化思路主要是减少参与计算的数据量以及计算本身的代价</li>
+</ul>
+<p><strong><em>PushdownPredicate</em></strong><br>PushdownPredicate 是最常见的用于减少参与计算的数据量的方法。</p>
+<p>前文中直接对两表进行 Join 操作，然后再 进行 Filter 操作。引入 PushdownPredicate 后，可先对两表进行 Filter 再进行 Join，如下图所示。</p>
+<p><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_predicate_pushdown.png" alt="Spark SQL RBO Predicate Pushdown"></p>
+<p>当 Filter 可过滤掉大部分数据时，参与 Join 的数据量大大减少，从而使得 Join 操作速度大大提高。</p>
+<p>这里需要说明的是，此处的优化是 LogicalPlan 的优化，从逻辑上保证了将 Filter 下推后由于参与 Join 的数据量变少而提高了性能。另一方面，在物理层面，Filter 下推后，对于支持 Filter 下推的 Storage，并不需要将表的全量数据扫描出来再过滤，而是直接只扫描符合 Filter 条件的数据，从而在物理层面极大减少了扫描表的开销，提高了执行速度。</p>
+<p><strong><em>ConstantFolding</em></strong><br>本文的 SQL 查询中，Project 部分包含了 100 + 800 + match_score + english_score 。如果不进行优化，那如果有一亿条记录，就会计算一亿次 100 + 80，非常浪费资源。因此可通过 ConstantFolding 将这些常量合并，从而减少不必要的计算，提高执行速度。</p>
+<p><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_constant_folding.png" alt="Spark SQL RBO Constant Folding"></p>
+<p><strong><em>ColumnPruning</em></strong><br>在上图中，Filter 与 Join 操作会保留两边所有字段，然后在 Project 操作中筛选出需要的特定列。如果能将 Project 下推，在扫描表时就只筛选出满足后续操作的最小字段集，则能大大减少 Filter 与 Project 操作的中间结果集数据量，从而极大提高执行速度。</p>
+<p><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_column_pruning.png" alt="Spark SQL RBO Column Pruning"></p>
+<p>这里需要说明的是，此处的优化是逻辑上的优化。在物理上，Project 下推后，对于列式存储，如 Parquet 和 ORC，可在扫描表时就只扫描需要的列而跳过不需要的列，进一步减少了扫描开销，提高了执行速度。</p>
+<p>经过如上优化后的 LogicalPlan 如下</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">== Optimized Logical Plan ==</span><br><span class="line">Aggregate [sum(cast(v#493 as bigint)) AS sum(v)#504L]</span><br><span class="line">+- Project [((180 + math_score#501) + english_score#502) AS v#493]</span><br><span class="line">   +- Join Inner, (id#496 = id#500)</span><br><span class="line">      :- Project [id#496]</span><br><span class="line">      :  +- Filter ((isnotnull(age#497) &amp;&amp; (age#497 &gt; 10)) &amp;&amp; isnotnull(id#496))</span><br><span class="line">      :     +- HiveTableRelation `jason`.`people`, org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, [id#496, age#497, name#498]</span><br><span class="line">      +- Filter isnotnull(id#500)</span><br><span class="line">         +- HiveTableRelation `jason`.`score`, org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, [id#500, math_score#501, english_score#502]</span><br></pre></td></tr></table></figure>
+<h1 id="SparkPlanner"><a href="#SparkPlanner" class="headerlink" title="SparkPlanner"></a>SparkPlanner</h1><p>得到优化后的 LogicalPlan 后，SparkPlanner 将其转化为 SparkPlan 即物理计划。</p>
+<p>本例中由于 score 表数据量较小，Spark 使用了 BroadcastJoin。因此 score 表经过 Filter 后直接使用 BroadcastExchangeExec 将数据广播出去，然后结合广播数据对 people 表使用 BroadcastHashJoinExec 进行 Join。再经过 Project 后使用 HashAggregateExec 进行分组聚合。</p>
+<p><img src="http://www.jasongj.com/img/spark/spark2_rbo/spark_sql_physical_plan.png" alt="Spark SQL RBO Column Pruning"></p>
+<p>至此，一条 SQL 从提交到解析、分析、优化以及执行的完整过程就介绍完毕。</p>
+<p>本文介绍的 Optimizer 属于 RBO，实现简单有效。它属于 LogicalPlan 的优化，所有优化均基于 LogicalPlan 本身的特点，未考虑数据本身的特点，也未考虑算子本身的代价。下文将介绍 CBO，它充分考虑了数据本身的特点（如大小、分布）以及操作算子的特点（中间结果集的分布及大小）及代价，从而更好的选择执行代价最小的物理执行计划，即 SparkPlan。</p>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'spark/rbo/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/java/threadlocal/" rel="next" title="Java进阶（七）正确理解Thread Local的原理与适用场景">
+                <i class="fa fa-chevron-left"></i> Java进阶（七）正确理解Thread Local的原理与适用场景
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/spark/cbo/" rel="prev" title="Spark SQL 性能优化再进一步 CBO 基于代价的优化">
+                Spark SQL 性能优化再进一步 CBO 基于代价的优化 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/spark/rbo/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/spark/rbo/'),
+                identifier: decodeURI('/spark/rbo/'),
+                title: 'Spark SQL / Catalyst 内部原理 与 RBO',
+                slug: 'spark/rbo/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">47</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://yuzhouwan.com/" title="博客推荐-宇宙湾" target="_blank">博客推荐-宇宙湾</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark-SQL-架构"><span class="nav-number">1.</span> <span class="nav-text">Spark SQL 架构</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Parser"><span class="nav-number">2.</span> <span class="nav-text">Parser</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Analyzer"><span class="nav-number">3.</span> <span class="nav-text">Analyzer</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Optimizer"><span class="nav-number">4.</span> <span class="nav-text">Optimizer</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SparkPlanner"><span class="nav-number">5.</span> <span class="nav-text">SparkPlanner</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/spark/rbo/';
+          this.page.identifier = 'spark/rbo/';
+          this.page.title = 'spark/rbo/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</body>
+</html>

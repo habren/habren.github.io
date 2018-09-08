@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="在UML 2.*的13种图形中，类图是使用频率最高的UML图之一，它表示了类与类之间的关系，帮助开发人员理解系统。它是系统分析和设计阶段的重要产物，也是系统编码和测试的重要模型依据。本文详细介绍了类间的依赖关系，关联关系（聚合、组合等），实现关系以及继承关系的UML表示形式及其在代码中的实现方式。">
+<meta name="keywords" content="UML,类图,系统设计,架构设计,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="UML(一) 类图详解">
 <meta property="og:url" content="http://www.jasongj.com/uml/class_diagram/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="在UML 2.*的13种图形中，类图是使用频率最高的UML图之一，它表示了类与类之间的关系，帮助开发人员理解系统。它是系统分析和设计阶段的重要产物，也是系统编码和测试的重要模型依据。本文详细介绍了类间的依赖关系，关联关系（聚合、组合等），实现关系以及继承关系的UML表示形式及其在代码中的实现方式。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/system_design/uml/class/employee.png">
 <meta property="og:image" content="http://www.jasongj.com/img/system_design/uml/class/person.png">
 <meta property="og:image" content="http://www.jasongj.com/img/system_design/uml/class/dependency.png">
@@ -463,7 +465,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  3,522
+                  3,526
                 </span>
               
 
@@ -493,8 +495,8 @@
 </blockquote>
 <h1 id="UML类图"><a href="#UML类图" class="headerlink" title="UML类图"></a>UML类图</h1><h2 id="UML类图介绍"><a href="#UML类图介绍" class="headerlink" title="UML类图介绍"></a>UML类图介绍</h2><p>在UML 2.*的13种图形中，类图是使用频率最高的UML图之一。类图用于描述系统中所包含的类以及它们之间的相互关系，帮助开发人员理解系统，它是系统分析和设计阶段的重要产物，也是系统编码和测试的重要模型依据。</p>
 <h2 id="类的UML图示"><a href="#类的UML图示" class="headerlink" title="类的UML图示"></a>类的UML图示</h2><p>在UML类图中，类使用包含类名、属性和方法且带有分隔线的长方形来表示。如一个Employee类，它包含private属性age，protected属性name，public属性email，package属性gender，public方法work()。其UML类图表示如下图所示。<br><img src="http://www.jasongj.com/img/system_design/uml/class/employee.png" alt="Class in Class Diagram"></p>
-<h3 id="属性及方法表示形式"><a href="#属性及方法表示形式" class="headerlink" title="属性及方法表示形式"></a>属性及方法表示形式</h3><p>UML规定类图中属性的表示方式为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">可见性 名称 : 类型 [=缺省值]</div></pre></td></tr></table></figure></p>
-<p>方法表示形式为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">可见性 方法名 [参数名 : 参数类型] : 返回值类型</div></pre></td></tr></table></figure></p>
+<h3 id="属性及方法表示形式"><a href="#属性及方法表示形式" class="headerlink" title="属性及方法表示形式"></a>属性及方法表示形式</h3><p>UML规定类图中属性的表示方式为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">可见性 名称 : 类型 [=缺省值]</span><br></pre></td></tr></table></figure></p>
+<p>方法表示形式为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">可见性 方法名 [参数名 : 参数类型] : 返回值类型</span><br></pre></td></tr></table></figure></p>
 <p>方法的多个参数间用逗号隔开，无返回值时，其类型为<code>void</code></p>
 <h3 id="属性及方法可见性"><a href="#属性及方法可见性" class="headerlink" title="属性及方法可见性"></a>属性及方法可见性</h3><ul>
 <li><strong>public</strong> 用<code>+</code>表示</li>
@@ -773,7 +775,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -904,7 +906,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -921,7 +923,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1248,5 +1250,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

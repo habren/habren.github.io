@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文介绍了享元模式的适用场景，并结合实例详述了享元模式的实现方式。最后分析了享元模式的优缺点及已（未）遵循的OOP原则">
+<meta name="keywords" content="java 享元模式,java flyweight pattern,java 设计模式,设计模式,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java设计模式（十一） 享元模式">
 <meta property="og:url" content="http://www.jasongj.com/design_pattern/flyweight/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了享元模式的适用场景，并结合实例详述了享元模式的实现方式。最后分析了享元模式的优缺点及已（未）遵循的OOP原则">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/designpattern/flyweight/FlyWeight.png">
 <meta property="og:updated_time" content="2017-02-17T12:31:23.000Z">
 <meta name="twitter:card" content="summary">
@@ -453,7 +455,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  2,820
+                  2,938
                 </span>
               
 
@@ -494,10 +496,10 @@
 <li><strong><em>内部状态</em></strong>是存储在享元对象内部，一般在构造时确定或通过setter设置，并且不会随环境改变而改变的状态，因此内部状态可以共享。</li>
 <li><strong><em>外部状态</em></strong>是随环境改变而改变、不可以共享的状态。外部状态在需要使用时通过客户端传入享元对象。外部状态必须由客户端保存。</li>
 </ul>
-<h1 id="享元模式实例解析"><a href="#享元模式实例解析" class="headerlink" title="享元模式实例解析"></a>享元模式实例解析</h1><p>本文代码可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/FlyweightPattern/src/main" target="_blank" rel="external">作者Github</a>下载</p>
-<p>享元接口，定义共享接口<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.flyweight;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FlyWeight</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">action</span><span class="params">(String externalState)</span></span>;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>具体享元类，实现享元接口。该类的对象将被复用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.flyweight;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConcreteFlyWeight</span> <span class="keyword">implements</span> <span class="title">FlyWeight</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(ConcreteFlyWeight.class);</div><div class="line"></div><div class="line">  <span class="keyword">private</span> String name;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ConcreteFlyWeight</span><span class="params">(String name)</span> </span>&#123;</div><div class="line">    <span class="keyword">this</span>.name = name;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="meta">@Override</span></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">action</span><span class="params">(String externalState)</span> </span>&#123;</div><div class="line">    LOG.info(<span class="string">"name = &#123;&#125;, outerState = &#123;&#125;"</span>, <span class="keyword">this</span>.name, externalState);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>享元模式中，最关键的享元工厂。它将维护已创建的享元实例，并通过实例标记（一般用内部状态）去索引对应的实例。当目标对象未创建时，享元工厂负责创建实例并将其加入标记-对象映射。当目标对象已创建时，享元工厂直接返回已有实例，实现对象的复用。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.factory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.util.concurrent.ConcurrentHashMap;</div><div class="line"></div><div class="line"><span class="keyword">import</span> org.slf4j.Logger;</div><div class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.flyweight.ConcreteFlyWeight;</div><div class="line"><span class="keyword">import</span> com.jasongj.flyweight.FlyWeight;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlyWeightFactory</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(FlyWeightFactory.class);</div><div class="line"></div><div class="line">  <span class="keyword">private</span> <span class="keyword">static</span> ConcurrentHashMap&lt;String, FlyWeight&gt; allFlyWeight = <span class="keyword">new</span> ConcurrentHashMap&lt;String, FlyWeight&gt;();</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> FlyWeight <span class="title">getFlyWeight</span><span class="params">(String name)</span> </span>&#123;</div><div class="line">    <span class="keyword">if</span> (allFlyWeight.get(name) == <span class="keyword">null</span>) &#123;</div><div class="line">      <span class="keyword">synchronized</span> (allFlyWeight) &#123;</div><div class="line">        <span class="keyword">if</span> (allFlyWeight.get(name) == <span class="keyword">null</span>) &#123;</div><div class="line">          LOG.info(<span class="string">"Instance of name = &#123;&#125; does not exist, creating it"</span>);</div><div class="line">          FlyWeight flyWeight = <span class="keyword">new</span> ConcreteFlyWeight(name);</div><div class="line">          LOG.info(<span class="string">"Instance of name = &#123;&#125; created"</span>);</div><div class="line">          allFlyWeight.put(name, flyWeight);</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> allFlyWeight.get(name);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="享元模式实例解析"><a href="#享元模式实例解析" class="headerlink" title="享元模式实例解析"></a>享元模式实例解析</h1><p>本文代码可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/FlyweightPattern/src/main" target="_blank" rel="noopener">作者Github</a>下载</p>
+<p>享元接口，定义共享接口<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj.flyweight;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FlyWeight</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">action</span><span class="params">(String externalState)</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>具体享元类，实现享元接口。该类的对象将被复用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj.flyweight;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.slf4j.Logger;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConcreteFlyWeight</span> <span class="keyword">implements</span> <span class="title">FlyWeight</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(ConcreteFlyWeight.class);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> String name;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ConcreteFlyWeight</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.name = name;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">action</span><span class="params">(String externalState)</span> </span>&#123;</span><br><span class="line">    LOG.info(<span class="string">"name = &#123;&#125;, outerState = &#123;&#125;"</span>, <span class="keyword">this</span>.name, externalState);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>享元模式中，最关键的享元工厂。它将维护已创建的享元实例，并通过实例标记（一般用内部状态）去索引对应的实例。当目标对象未创建时，享元工厂负责创建实例并将其加入标记-对象映射。当目标对象已创建时，享元工厂直接返回已有实例，实现对象的复用。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj.factory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.ConcurrentHashMap;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.slf4j.Logger;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.jasongj.flyweight.ConcreteFlyWeight;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.flyweight.FlyWeight;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlyWeightFactory</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(FlyWeightFactory.class);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> ConcurrentHashMap&lt;String, FlyWeight&gt; allFlyWeight = <span class="keyword">new</span> ConcurrentHashMap&lt;String, FlyWeight&gt;();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> FlyWeight <span class="title">getFlyWeight</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (allFlyWeight.get(name) == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">synchronized</span> (allFlyWeight) &#123;</span><br><span class="line">        <span class="keyword">if</span> (allFlyWeight.get(name) == <span class="keyword">null</span>) &#123;</span><br><span class="line">          LOG.info(<span class="string">"Instance of name = &#123;&#125; does not exist, creating it"</span>);</span><br><span class="line">          FlyWeight flyWeight = <span class="keyword">new</span> ConcreteFlyWeight(name);</span><br><span class="line">          LOG.info(<span class="string">"Instance of name = &#123;&#125; created"</span>);</span><br><span class="line">          allFlyWeight.put(name, flyWeight);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> allFlyWeight.get(name);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>从上面代码中可以看到，享元模式中对象的复用完全依靠享元工厂。同时本例中实现了对象创建的懒加载。并且为了保证线程安全及效率，本文使用了双重检查（Double Check）。</p>
 <p>本例中，<code>name</code>可以认为是内部状态，在构造时确定。<code>externalState</code>属于外部状态，由客户端在调用时传入。</p>
 <h1 id="享元模式分析"><a href="#享元模式分析" class="headerlink" title="享元模式分析"></a>享元模式分析</h1><h2 id="享元模式优点"><a href="#享元模式优点" class="headerlink" title="享元模式优点"></a>享元模式优点</h2><ul>
@@ -736,7 +738,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -867,7 +869,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -884,7 +886,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1211,5 +1213,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

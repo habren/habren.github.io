@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文简要介绍了线性回归的原理，适用场景，并结合实例讲解如何使用R语言解决线性回归问题">
+<meta name="keywords" content="R,r,R语言,机器学习,线性回归,梯度下降,machine learning,前向选择,后向选择,正规方程,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="机器学习（一） 从一个R语言案例学线性回归">
 <meta property="og:url" content="http://www.jasongj.com/2015/03/27/ml1_linear_regression/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文简要介绍了线性回归的原理，适用场景，并结合实例讲解如何使用R语言解决线性回归问题">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/ml/linearregression/one_variable_lr.png">
 <meta property="og:image" content="http://www.jasongj.com/img/ml/linearregression/model1.png">
 <meta property="og:image" content="http://www.jasongj.com/img/ml/linearregression/model2.png">
@@ -468,7 +470,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  3,311
+                  3,435
                 </span>
               
 
@@ -503,7 +505,7 @@
 <h2 id="R-2"><a href="#R-2" class="headerlink" title="$R^2$"></a>$R^2$</h2><p>　　在选择用于预测的直线时，我们可以使用已知记录的y值的平均值作为直线，如上图红线所示，这条线我们称之为baseline model。SST(total sum of squares)指是的baseline的SSE。用SSE表征模型好坏也有不便之处，比如给定$SSE=10$，我们并不知道这个模型是好还是好，因此我们引入另一个变量，$R^2$，定义如下：$$R^2 = 1 - \frac{SSE}{SST}$$<br>　　$R^2$用来表明我们所选的模型在baseline model的基础之上提升了多少（对于任意给定数据集，我们都可以用baseline作为模型，而事实上，我们总希望我们最后选出的模型在baseline基础之上有所提升），并且这个值的范围是[0,1]。$R^2=0$意味着它并未在baseline model的基础之上有所提升，而$R^2=1$（此时$SSE=0$）意味着一个一个非常完美的模型。
 　　</p>
 <h2 id="Adjusted-R-2"><a href="#Adjusted-R-2" class="headerlink" title="Adjusted $R^2$"></a>Adjusted $R^2$</h2><p>　　在多元回归模型中，选用的Feature越多，我们所能得到的$R^2$越大。所以$R^2$不能用于帮助我们在Feature特别多时，选择合适的Feature用于建模。因此又有了Adjusted $R^2$，它会补偿由Feature增多/减少而引起的$R^2$的增加/减少，从而可通过它选择出真正适合用于建模的Feature。</p>
-<h1 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h1><p>　　许多研究表明，全球平均气温在过去几十年中有所升高，以此引起的海平面上升和极端天气频现将会影响无数人。本文所讲案例就试图研究全球平均气温与一些其它因素的关系。<br>　　读者可<a href="https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv" target="_blank" rel="external">由此下载</a>本文所使用的数据<a href="https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv" target="_blank" rel="external">climate_change.csv</a>。<br>　　<a href="https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv" target="_blank" rel="external">https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv</a><br>　　此数据集包含了从1983年5月到2008年12月的数据。<br>　　本例我们以1983年5月到2006年12月的数据作为训练数据集，以之后的数据作为测试数据集。</p>
+<h1 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h1><p>　　许多研究表明，全球平均气温在过去几十年中有所升高，以此引起的海平面上升和极端天气频现将会影响无数人。本文所讲案例就试图研究全球平均气温与一些其它因素的关系。<br>　　读者可<a href="https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv" target="_blank" rel="noopener">由此下载</a>本文所使用的数据<a href="https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv" target="_blank" rel="noopener">climate_change.csv</a>。<br>　　<a href="https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv" target="_blank" rel="noopener">https://courses.edx.org/c4x/MITx/15.071x_2/asset/climate_change.csv</a><br>　　此数据集包含了从1983年5月到2008年12月的数据。<br>　　本例我们以1983年5月到2006年12月的数据作为训练数据集，以之后的数据作为测试数据集。</p>
 <h2 id="数据"><a href="#数据" class="headerlink" title="数据"></a>数据</h2><p>　　首先加载数据</p>
 <pre><code>temp &lt;- read.csv(&quot;climate_change.csv&quot;)
 </code></pre><p>　　数据解释</p>
@@ -615,7 +617,7 @@
 </table>
 <p>   任一组合的Adjusted $R^2$都比上一轮小，因此选择上一轮的Feature组合作为最终的模型，也即<br>$$Temp \sim MEI + CO_2 + N_2O + CFC.11 + CFC.12 + TSI + Aerosols$$</p>
 <p>   由<code>summary(model2)</code>可算出每个Feature的coefficient如下 。<br><img src="http://www.jasongj.com/img/ml/linearregression/model2.png" alt="Feature coefficient"></p>
-<h1 id="线性回归介绍"><a href="#线性回归介绍" class="headerlink" title="线性回归介绍"></a>线性回归介绍</h1><p>　　<br>　　在线性回归中，数据使用线性预测函数来建模，并且未知的模型参数也是通过数据来估计。这些模型被叫做线性模型。最常用的线性回归建模是给定X值的y的条件均值是X的仿射函数。<br>　　线性回归是回归分析中第一种经过严格研究并在实际应用中广泛使用的类型。这是因为线性依赖于其未知参数的模型比非线性依赖于其位置参数的模型更容易拟合，而且产生的估计的统计特性也更容易确定。<br>　　上面这段定义来自于<a href="http://zh.wikipedia.org/wiki/%E7%B7%9A%E6%80%A7%E5%9B%9E%E6%AD%B8" target="_blank" rel="external">维基百科</a>。<br>　　<br>　　线性回归假设特征和结果满足线性关系。我们用$X_1,X_2..X_n$ 去描述Feature里面的分量，比如$x_1$=房间的面积，$x_2$=房间的朝向，等等，我们可以做出一个估计函数：  $$h(x)=h_θ(x)=θ_0+θ_1x_1+θ_2x_2$$</p>
+<h1 id="线性回归介绍"><a href="#线性回归介绍" class="headerlink" title="线性回归介绍"></a>线性回归介绍</h1><p>　　<br>　　在线性回归中，数据使用线性预测函数来建模，并且未知的模型参数也是通过数据来估计。这些模型被叫做线性模型。最常用的线性回归建模是给定X值的y的条件均值是X的仿射函数。<br>　　线性回归是回归分析中第一种经过严格研究并在实际应用中广泛使用的类型。这是因为线性依赖于其未知参数的模型比非线性依赖于其位置参数的模型更容易拟合，而且产生的估计的统计特性也更容易确定。<br>　　上面这段定义来自于<a href="http://zh.wikipedia.org/wiki/%E7%B7%9A%E6%80%A7%E5%9B%9E%E6%AD%B8" target="_blank" rel="noopener">维基百科</a>。<br>　　<br>　　线性回归假设特征和结果满足线性关系。我们用$X_1,X_2..X_n$ 去描述Feature里面的分量，比如$x_1$=房间的面积，$x_2$=房间的朝向，等等，我们可以做出一个估计函数：  $$h(x)=h_θ(x)=θ_0+θ_1x_1+θ_2x_2$$</p>
 <p>　　θ在这儿称为参数(coefficient)，在这的意思是调整Feature中每个分量的影响力，就是到底是房屋的面积更重要还是房屋的地段更重要。如果我们令$x_0 = 1$，就可以用向量的方式来表示了：　　$$h_θ(x)=θ^TX$$<br>　　<br>　　我们的程序也需要一个机制去评估我们θ是否比较好，所以说需要对我们做出的h函数进行评估，一般这个函数称为损失函数（loss function）或者错误函数(error function)，也有叫代价函数（cost function）的。在本文中，我们称这个函数为J函数。<br>　　在这里，我们可以认为J函数如下：　　$$J(0)=\frac{1}{2m}\sum_{i=1}^m(h_0x^{(i)}-y^{(i)})^2$$<br>　　<br>　　这个错误估计函数是去对$x(i)$的估计值与真实值$y(i)$差的平方和作为错误估计函数，前面乘上的$1/2m$是为了在求导的时候，这个系数就不见了。至于为何选择平方和作为错误估计函数，就得从概率分布的角度来解释了。<br>　　如何调整$θ$以使得$J(θ)$取得最小值有很多方法，本文会重点介绍梯度下降法和正规方程法。
 　　</p>
 <h1 id="梯度下降"><a href="#梯度下降" class="headerlink" title="梯度下降"></a>梯度下降</h1><p>　　在选定线性回归模型后，只需要确定参数$θ$，就可以将模型用来预测。然而$θ$需要使得$J(θ)$最小。因此问题归结为求极小值问题。<br>　　梯度下降法流程如下：</p>
@@ -623,6 +625,11 @@
 <p>　　梯度方向由$J(θ)$对$θ$的偏导数确定，由于求的是极小值，因此梯度方向是偏导数的反方向。更新公式为为： $$0_j = 0_j - α\frac{1}{m}\sum^m_{i=1}(h_θ(x^{(i)})-y^{(i)})x_j^{i}$$<br>　　<br>　　这种方法需要对全部的训练数据求得误差后再对$θ$进行更新。（$α$为学习速度）
 　　</p>
 <h1 id="正规方程（Normal-Equation）"><a href="#正规方程（Normal-Equation）" class="headerlink" title="正规方程（Normal Equation）"></a>正规方程（Normal Equation）</h1><p>　　$Xθ=y$<br>=&gt;<br>　　$X^TXθ=X^Ty$<br>=&gt;<br>　　$θ = (X^TX)^{-1}X^Ty$<br>　　利用以上公式可直接算出$θ$<br>　　<br>　　看到这里，读者可能注意到了，正规方程法，不需要像梯度下降那样迭代多次，更关键的是从编程的角度更直接，那为什么不直接用正规，还要保留梯度下降呢？想必学过线性代数的朋友一眼能看出来，正规方程需要求$(X^TX)$的逆，这就要求$(X^TX)$是可逆的。同时，如果Feature数比较多，比如共有100个Feature，那么$(X^TX)$的维度会非常高，求其逆会非常耗时。</p>
+<h1 id="《机器学习》系列文章"><a href="#《机器学习》系列文章" class="headerlink" title="《机器学习》系列文章"></a>《机器学习》系列文章</h1><ul>
+<li><a href="http://www.jasongj.com/2015/03/27/ml1_linear_regression/">机器学习（一） 从一个R语言案例学线性回归</a></li>
+<li><a href="http://www.jasongj.com/ml/classification/">机器学习（二） 如何做到Kaggle排名前2%</a></li>
+<li><a href="http://www.jasongj.com/ml/associationrules/">机器学习（三） 关联规则R语言实战Apriori</a></li>
+</ul>
 
       <script>
         window.disqusProxy={
@@ -826,7 +833,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -934,7 +941,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#线性回归简介"><span class="nav-number">1.</span> <span class="nav-text">线性回归简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#SSE-amp-RMSE"><span class="nav-number">1.1.</span> <span class="nav-text">SSE  & RMSE</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#R-2"><span class="nav-number">1.2.</span> <span class="nav-text">$R^2$</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Adjusted-R-2"><span class="nav-number">1.3.</span> <span class="nav-text">Adjusted $R^2$</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#案例"><span class="nav-number">2.</span> <span class="nav-text">案例</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#数据"><span class="nav-number">2.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#模型选择"><span class="nav-number">2.2.</span> <span class="nav-text">模型选择</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#前向选择"><span class="nav-number">2.2.1.</span> <span class="nav-text">前向选择</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#后向选择"><span class="nav-number">2.2.2.</span> <span class="nav-text">后向选择</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结合实例选择模型"><span class="nav-number">2.3.</span> <span class="nav-text">结合实例选择模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#线性回归介绍"><span class="nav-number">3.</span> <span class="nav-text">线性回归介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#梯度下降"><span class="nav-number">4.</span> <span class="nav-text">梯度下降</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#正规方程（Normal-Equation）"><span class="nav-number">5.</span> <span class="nav-text">正规方程（Normal Equation）</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#线性回归简介"><span class="nav-number">1.</span> <span class="nav-text">线性回归简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#SSE-amp-RMSE"><span class="nav-number">1.1.</span> <span class="nav-text">SSE  &amp; RMSE</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#R-2"><span class="nav-number">1.2.</span> <span class="nav-text">$R^2$</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Adjusted-R-2"><span class="nav-number">1.3.</span> <span class="nav-text">Adjusted $R^2$</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#案例"><span class="nav-number">2.</span> <span class="nav-text">案例</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#数据"><span class="nav-number">2.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#模型选择"><span class="nav-number">2.2.</span> <span class="nav-text">模型选择</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#前向选择"><span class="nav-number">2.2.1.</span> <span class="nav-text">前向选择</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#后向选择"><span class="nav-number">2.2.2.</span> <span class="nav-text">后向选择</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结合实例选择模型"><span class="nav-number">2.3.</span> <span class="nav-text">结合实例选择模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#线性回归介绍"><span class="nav-number">3.</span> <span class="nav-text">线性回归介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#梯度下降"><span class="nav-number">4.</span> <span class="nav-text">梯度下降</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#正规方程（Normal-Equation）"><span class="nav-number">5.</span> <span class="nav-text">正规方程（Normal Equation）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#《机器学习》系列文章"><span class="nav-number">6.</span> <span class="nav-text">《机器学习》系列文章</span></a></li></ol></div>
             
 
           </div>
@@ -957,7 +964,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -974,7 +981,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1321,5 +1328,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

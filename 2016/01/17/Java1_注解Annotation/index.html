@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文介绍了Java Annotation的概念及Java提供的四种Meta Annotation的功能，并结合实例详解了自定义Annotation的方法和注意事项">
+<meta name="keywords" content="java,Java,JAVA,注解,annotation,Annotation,技术世界,郭俊 Jason,大数据架构,java 注解,java annotation">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java进阶（一）Annotation（注解）">
 <meta property="og:url" content="http://www.jasongj.com/2016/01/17/Java1_注解Annotation/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了Java Annotation的概念及Java提供的四种Meta Annotation的功能，并结合实例详解了自定义Annotation的方法和注意事项">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2017-02-15T12:31:23.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Java进阶（一）Annotation（注解）">
@@ -442,7 +444,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  3,402
+                  3,515
                 </span>
               
 
@@ -496,11 +498,11 @@
 <h2 id="Inherited"><a href="#Inherited" class="headerlink" title="@Inherited"></a>@Inherited</h2><p><code>@Inherited</code> 是一个标记注解。如果一个使用了<code>@Inherited</code>修饰的annotation类型被用于一个class，则这个Annotation将被用于该class的子类。</p>
 <h1 id="自定义Annotation"><a href="#自定义Annotation" class="headerlink" title="自定义Annotation"></a>自定义Annotation</h1><p>在实际项目中，经常会碰到下面这种场景，一个接口的实现类或者抽象类的子类很多，经常需要根据不同情况（比如根据配置文件）实例化并使用不同的子类。典型的例子是结合工厂使用职责链模式。</p>
 <p>此时，可以为每个实现类加上特定的Annotation，并在Annotation中给该类取一个标识符，应用程序可通过该标识符来判断应该实例化哪个子类。</p>
-<p>下面这个例子，定义了一个名为Component的Annotation，它包含一个名为identifier的成员变量。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.annotation;</div><div class="line"></div><div class="line"><span class="keyword">import</span> java.lang.annotation.Documented;</div><div class="line"><span class="keyword">import</span> java.lang.annotation.RetentionPolicy;</div><div class="line"><span class="keyword">import</span> java.lang.annotation.Target;</div><div class="line"><span class="keyword">import</span> java.lang.annotation.ElementType;</div><div class="line"><span class="keyword">import</span> java.lang.annotation.Inherited;</div><div class="line"><span class="keyword">import</span> java.lang.annotation.Retention;</div><div class="line"></div><div class="line"><span class="meta">@Target</span>(ElementType.TYPE)</div><div class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</div><div class="line"><span class="meta">@Documented</span></div><div class="line"><span class="meta">@Inherited</span></div><div class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Component &#123;</div><div class="line">	<span class="function">String <span class="title">identifier</span> <span class="params">()</span> <span class="keyword">default</span> ""</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>对于上文所说的实现类加上<code>@Component</code><br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.annotation.Component;</div><div class="line"></div><div class="line"><span class="meta">@Component</span>(identifier=<span class="string">"upper"</span>)</div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UpperCaseComponent</span> </span>&#123;</div><div class="line"></div><div class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">doWork</span><span class="params">(String input)</span> </span>&#123;</div><div class="line">		<span class="keyword">if</span>(input != <span class="keyword">null</span>) &#123;</div><div class="line">			<span class="keyword">return</span> input.toUpperCase();</div><div class="line">		&#125; <span class="keyword">else</span> &#123;</div><div class="line">			<span class="keyword">return</span> <span class="keyword">null</span>;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>应用程序中可以通过反射获取UpperCaseComponent对应的identifier<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.annotation.Component;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Client</span> </span>&#123;</div><div class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">            Class componentClass = Class.forName(<span class="string">"com.jasongj.UpperCaseComponent"</span>);</div><div class="line">            <span class="keyword">if</span>(componentClass.isAnnotationPresent(Component.class)) &#123;</div><div class="line">                Component component = (Component)componentClass.getAnnotation(Component.class);</div><div class="line">                String identifier = component.identifier();</div><div class="line">                System.out.println(String.format(<span class="string">"Identifier for "</span></div><div class="line">                    + <span class="string">"com.jasongj.UpperCaseComponent is ' %s '"</span>, identifier));</div><div class="line">            &#125; <span class="keyword">else</span> &#123;</div><div class="line">                System.out.println(<span class="string">"com.jasongj.UpperCaseComponent is not annotated by"</span></div><div class="line">						+ <span class="string">" com.jasongj.annotation.Component"</span>);</div><div class="line">            &#125;</div><div class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException ex) &#123;</div><div class="line">			ex.printStackTrace();</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">Identifier for com.jasongj.UpperCaseComponent is &apos; upper &apos;</div></pre></td></tr></table></figure></p>
-<p>如果把<code>@Component</code>的<code>@Retention</code>设置为    <code>RetentionPolicy.SOURCE</code>或者<code>RetentionPolicy.CLASS</code>，则会得到如下结果，验证了上文中对<code>@Retention</code>的描述<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">com.jasongj.UpperCaseComponent is not annotated by com.jasongj.annotation.Component</div></pre></td></tr></table></figure></p>
+<p>下面这个例子，定义了一个名为Component的Annotation，它包含一个名为identifier的成员变量。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj.annotation;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.Documented;</span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.RetentionPolicy;</span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.Target;</span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.ElementType;</span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.Inherited;</span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.Retention;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Inherited</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Component &#123;</span><br><span class="line">	<span class="function">String <span class="title">identifier</span> <span class="params">()</span> <span class="keyword">default</span> ""</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>对于上文所说的实现类加上<code>@Component</code><br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.jasongj.annotation.Component;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Component</span>(identifier=<span class="string">"upper"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UpperCaseComponent</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">doWork</span><span class="params">(String input)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">if</span>(input != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span> input.toUpperCase();</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>应用程序中可以通过反射获取UpperCaseComponent对应的identifier<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.jasongj.annotation.Component;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Client</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Class componentClass = Class.forName(<span class="string">"com.jasongj.UpperCaseComponent"</span>);</span><br><span class="line">            <span class="keyword">if</span>(componentClass.isAnnotationPresent(Component.class)) &#123;</span><br><span class="line">                Component component = (Component)componentClass.getAnnotation(Component.class);</span><br><span class="line">                String identifier = component.identifier();</span><br><span class="line">                System.out.println(String.format(<span class="string">"Identifier for "</span></span><br><span class="line">                    + <span class="string">"com.jasongj.UpperCaseComponent is ' %s '"</span>, identifier));</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                System.out.println(<span class="string">"com.jasongj.UpperCaseComponent is not annotated by"</span></span><br><span class="line">						+ <span class="string">" com.jasongj.annotation.Component"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException ex) &#123;</span><br><span class="line">			ex.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>结果如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Identifier for com.jasongj.UpperCaseComponent is &apos; upper &apos;</span><br></pre></td></tr></table></figure></p>
+<p>如果把<code>@Component</code>的<code>@Retention</code>设置为    <code>RetentionPolicy.SOURCE</code>或者<code>RetentionPolicy.CLASS</code>，则会得到如下结果，验证了上文中对<code>@Retention</code>的描述<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">com.jasongj.UpperCaseComponent is not annotated by com.jasongj.annotation.Component</span><br></pre></td></tr></table></figure></p>
 <h1 id="Java内置Annotation"><a href="#Java内置Annotation" class="headerlink" title="Java内置Annotation"></a>Java内置Annotation</h1><p>Annotation的语法比较简单，除了@符号的使用外，他基本与Java固有的语法一致，JavaSE中内置三个标准Annotation，定义在<code>java.lang</code>中：</p>
 <ol>
 <li><code>@Override</code> 是一个标记型Annotation，说明了被标注的方法覆盖了父类的方法，起到了断言的作用。如果给一个非覆盖父类方法的方法添加该Annotation，编译器将报编译错误。它有两个典型的使用场景，一是在试图覆盖父类方法却写错了方法名时报错，二是删除已被子类覆盖（且用Annotation修饰）的父类方法时报错。</li>
@@ -520,7 +522,7 @@
 <h1 id="Annotation与Interface的异同"><a href="#Annotation与Interface的异同" class="headerlink" title="Annotation与Interface的异同"></a>Annotation与Interface的异同</h1><ul>
 <li>Annotation类型使用关键字<code>@interface</code>而非<code>interface</code>。注意开头的<code>@</code>符号</li>
 <li>Annotataion的方法定义是受限制的。其方法必须声明为无参数、无异常抛出的。这些方法同时也定义了Annotation的成员——方法名即为成员名，而方法返回类型即为成员类型。方法返回类型必须为Java基础类型、Class类型、枚举类型、Annotation类型或者相应的一维数组。方法后面可以使用default关键字和一个默认数值来声明成员的默认值，null不能作为成员默认值。成员一般不能是泛型，只有当其类型是Class时可以使用泛型，因为此方法能够用类型转换将各种类型转换为Class</li>
-<li>Annotation和interface都可以定义常量、静态成员类型，也都可以被实现或者继承</li>
+<li>Annotation和interface都可以定义常量、静态成员类型。interface可以被实现或者继承，Annotation不可以</li>
 </ul>
 <h1 id="Java进阶系列"><a href="#Java进阶系列" class="headerlink" title="Java进阶系列"></a>Java进阶系列</h1><ul>
 <li><a href="http://www.jasongj.com/2016/01/17/Java1_注解Annotation/">Java进阶（一）Annotation（注解）</a></li>
@@ -729,7 +731,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -860,7 +862,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -877,7 +879,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1204,5 +1206,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

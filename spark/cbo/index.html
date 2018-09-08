@@ -1,0 +1,1326 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CBO,基于代价的优化,spark,sql,CBO,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界,spark sql" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="上文介绍的 RBO 属于逻辑计划的优化，只考虑查询，未考虑数据本身的特点。本文将介绍 CBO 如何利用数据本身的特点优化物理执行计划。">
+<meta name="keywords" content="CBO,基于代价的优化,spark,sql,CBO,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界,spark sql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spark SQL 性能优化再进一步 CBO 基于代价的优化">
+<meta property="og:url" content="http://www.jasongj.com/spark/cbo/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="上文介绍的 RBO 属于逻辑计划的优化，只考虑查询，未考虑数据本身的特点。本文将介绍 CBO 如何利用数据本身的特点优化物理执行计划。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_sql_cost_model.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_operator_estimation.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_filter_estimation.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_equal_height_histogram.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_build_side.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_build_side_selection.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_join_type.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_linear_join.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_join_reorder.png">
+<meta property="og:updated_time" content="2018-09-16T23:02:13.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spark SQL 性能优化再进一步 CBO 基于代价的优化">
+<meta name="twitter:description" content="上文介绍的 RBO 属于逻辑计划的优化，只考虑查询，未考虑数据本身的特点。本文将介绍 CBO 如何利用数据本身的特点优化物理执行计划。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/spark/spark3_cbo/spark_sql_cost_model.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/spark/cbo/"/>
+
+
+
+
+
+  <title>
+  
+    Spark SQL 性能优化再进一步 CBO 基于代价的优化 | 技术世界 | CBO,基于代价的优化,spark,sql,CBO,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界,spark sql
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/spark/cbo/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Spark SQL 性能优化再进一步 CBO 基于代价的优化
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-09-17T07:02:13+08:00">
+                2018-09-17
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-09-17T07:02:13+08:00">
+                2018-09-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big data</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/大数据/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/spark/cbo/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/spark/cbo/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/spark/cbo/" class="leancloud_visitors" data-flag-title="Spark SQL 性能优化再进一步 CBO 基于代价的优化">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  3,937
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  上文介绍的 RBO 属于逻辑计划的优化，只考虑查询，未考虑数据本身的特点。本文将介绍 CBO 如何利用数据本身的特点优化物理执行计划。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/spark/cbo">原文链接</a>　<a href="http://www.jasongj.com/spark/cbo">http://www.jasongj.com/spark/cbo/</a></p>
+</blockquote>
+<blockquote>
+<p>本文所述内容均基于 2018年9月17日 Spark 最新 Release 2.3.1 版本。后续将持续更新</p>
+</blockquote>
+<h1 id="Spark-CBO-背景"><a href="#Spark-CBO-背景" class="headerlink" title="Spark CBO 背景"></a>Spark CBO 背景</h1><p>上文<a href="http://www.jasongj.com/spark/rbo/">Spark SQL 内部原理</a>中介绍的 Optimizer 属于 RBO，实现简单有效。它属于 LogicalPlan 的优化，所有优化均基于 LogicalPlan 本身的特点，未考虑数据本身的特点，也未考虑算子本身的代价。</p>
+<p>本文将介绍 CBO，它充分考虑了数据本身的特点（如大小、分布）以及操作算子的特点（中间结果集的分布及大小）及代价，从而更好的选择执行代价最小的物理执行计划，即 SparkPlan。</p>
+<h1 id="Spark-CBO-原理"><a href="#Spark-CBO-原理" class="headerlink" title="Spark CBO 原理"></a>Spark CBO 原理</h1><p>CBO 原理是计算所有可能的物理计划的代价，并挑选出代价最小的物理执行计划。其核心在于评估一个给定的物理执行计划的代价。</p>
+<p>物理执行计划是一个树状结构，其代价等于每个执行节点的代价总合，如下图所示。</p>
+<div align="center"><br><img width="70%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_sql_cost_model.png" alt="CBO 总代价"><br></div>
+
+<!--
+![CBO 总代价](http://www.jasongj.com/img/spark/spark3_cbo/spark_sql_cost_model.png)
+-->
+<p>而每个执行节点的代价，分为两个部分</p>
+<ul>
+<li>该执行节点对数据集的影响，或者说该节点输出数据集的大小与分布</li>
+<li>该执行节点操作算子的代价</li>
+</ul>
+<p>每个操作算子的代价相对固定，可用规则来描述。而执行节点输出数据集的大小与分布，分为两个部分：1) 初始数据集，也即原始表，其数据集的大小与分布可直接通过统计得到；2)中间节点输出数据集的大小与分布可由其输入数据集的信息与操作本身的特点推算。</p>
+<p>所以，最终主要需要解决两个问题</p>
+<ul>
+<li>如何获取原始数据集的统计信息</li>
+<li>如何根据输入数据集估算特定算子的输出数据集</li>
+</ul>
+<h2 id="Statistics-收集"><a href="#Statistics-收集" class="headerlink" title="Statistics 收集"></a>Statistics 收集</h2><p>通过如下 SQL 语句，可计算出整个表的记录总数以及总大小<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ANALYZE</span> <span class="keyword">TABLE</span> table_name <span class="keyword">COMPUTE</span> <span class="keyword">STATISTICS</span>;</span><br></pre></td></tr></table></figure></p>
+<p>从如下示例中，Statistics 一行可见， customer 表数据总大小为 37026233 字节，即 35.3MB，总记录数为 28万，与事实相符。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">spark-sql&gt; ANALYZE TABLE customer COMPUTE STATISTICS;</span><br><span class="line">Time taken: 12.888 seconds</span><br><span class="line"></span><br><span class="line">spark-sql&gt; desc extended customer;</span><br><span class="line">c_customer_sk  bigint   NULL</span><br><span class="line">c_customer_id  string   NULL</span><br><span class="line">c_current_cdemo_sk      bigint  NULL</span><br><span class="line">c_current_hdemo_sk      bigint  NULL</span><br><span class="line">c_current_addr_sk       bigint  NULL</span><br><span class="line">c_first_shipto_date_sk  bigint  NULL</span><br><span class="line">c_first_sales_date_sk   bigint  NULL</span><br><span class="line">c_salutation   string   NULL</span><br><span class="line">c_first_name   string   NULL</span><br><span class="line">c_last_name    string   NULL</span><br><span class="line">c_preferred_cust_flag   string  NULL</span><br><span class="line">c_birth_day    int      NULL</span><br><span class="line">c_birth_month  int      NULL</span><br><span class="line">c_birth_year   int      NULL</span><br><span class="line">c_birth_country string  NULL</span><br><span class="line">c_login string NULL</span><br><span class="line">c_email_address string  NULL</span><br><span class="line">c_last_review_date      string  NULL</span><br><span class="line"></span><br><span class="line"># Detailed Table Information</span><br><span class="line">Database       jason_tpc_ds</span><br><span class="line">Table   customer</span><br><span class="line">Owner   jason</span><br><span class="line">Created Time   Sat Sep 15 14:00:40 CST 2018</span><br><span class="line">Last Access    Thu Jan 01 08:00:00 CST 1970</span><br><span class="line">Created By     Spark 2.3.2</span><br><span class="line">Type    EXTERNAL</span><br><span class="line">Provider       hive</span><br><span class="line">Table Properties        [transient_lastDdlTime=1536997324]</span><br><span class="line">Statistics     37026233 bytes, 280000 rows</span><br><span class="line">Location       hdfs://dw/tpc_ds/customer</span><br><span class="line">Serde Library  org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe</span><br><span class="line">InputFormat    org.apache.hadoop.mapred.TextInputFormat</span><br><span class="line">OutputFormat   org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat</span><br><span class="line">Storage Properties      [field.delim=|, serialization.format=|]</span><br><span class="line">Partition Provider      Catalog</span><br><span class="line">Time taken: 1.691 seconds, Fetched 36 row(s)</span><br></pre></td></tr></table></figure>
+<p>通过如下 SQL 语句，可计算出指定列的统计信息<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ANALYZE</span> <span class="keyword">TABLE</span> table_name <span class="keyword">COMPUTE</span> <span class="keyword">STATISTICS</span> <span class="keyword">FOR</span> <span class="keyword">COLUMNS</span> [column1] [,column2] [,column3] [,column4] ... [,columnn];</span><br></pre></td></tr></table></figure></p>
+<p>从如下示例可见，customer 表的 c_customer_sk 列最小值为 1， 最大值为 280000，null 值个数为 0，不同值个数为 274368，平均列长度为 8，最大列长度为 8。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">spark-sql&gt; ANALYZE TABLE customer COMPUTE STATISTICS FOR COLUMNS c_customer_sk, c_customer_id, c_current_cdemo_sk;</span><br><span class="line">Time taken: 9.139 seconds</span><br><span class="line">spark-sql&gt; desc extended customer c_customer_sk;</span><br><span class="line">col_name       c_customer_sk</span><br><span class="line">data_type      bigint</span><br><span class="line"><span class="keyword">comment</span> <span class="literal">NULL</span></span><br><span class="line"><span class="keyword">min</span>     <span class="number">1</span></span><br><span class="line"><span class="keyword">max</span>     <span class="number">280000</span></span><br><span class="line">num_nulls      <span class="number">0</span></span><br><span class="line">distinct_count <span class="number">274368</span></span><br><span class="line">avg_col_len    <span class="number">8</span></span><br><span class="line">max_col_len    <span class="number">8</span></span><br><span class="line">histogram      <span class="literal">NULL</span></span><br></pre></td></tr></table></figure></p>
+<p>除上述示例中的统计信息外，Spark CBO 还直接等高直方图。在上例中，histogram 为 NULL。其原因是，spark.sql.statistics.histogram.enabled 默认值为 false，也即 ANALYZE 时默认不计算及存储 histogram。</p>
+<p>下例中，通过 <code>SET spark.sql.statistics.histogram.enabled=true;</code> 启用 histogram 后，完整的统计信息如下。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">spark-sql&gt; ANALYZE TABLE customer COMPUTE STATISTICS FOR COLUMNS c_customer_sk,c_customer_id,c_current_cdemo_sk,c_current_hdemo_sk,c_current_addr_sk,c_first_shipto_date_sk,c_first_sales_date_sk,c_salutation,c_first_name,c_last_name,c_preferred_cust_flag,c_birth_day,c_birth_month,c_birth_year,c_birth_country,c_login,c_email_address,c_last_review_date;</span><br><span class="line">Time taken: 125.624 seconds</span><br><span class="line"></span><br><span class="line">spark-sql&gt; desc extended customer c_customer_sk;</span><br><span class="line">col_name       c_customer_sk</span><br><span class="line">data_type      bigint</span><br><span class="line"><span class="keyword">comment</span> <span class="literal">NULL</span></span><br><span class="line"><span class="keyword">min</span>     <span class="number">1</span></span><br><span class="line"><span class="keyword">max</span>     <span class="number">280000</span></span><br><span class="line">num_nulls      <span class="number">0</span></span><br><span class="line">distinct_count <span class="number">274368</span></span><br><span class="line">avg_col_len    <span class="number">8</span></span><br><span class="line">max_col_len    <span class="number">8</span></span><br><span class="line">histogram       height: <span class="number">1102.3622047244094</span>, num_of_bins: <span class="number">254</span></span><br><span class="line">bin_0   lower_bound: <span class="number">1.0</span>, upper_bound: <span class="number">1090.0</span>, distinct_count: <span class="number">1089</span></span><br><span class="line">bin_1   lower_bound: <span class="number">1090.0</span>, upper_bound: <span class="number">2206.0</span>, distinct_count: <span class="number">1161</span></span><br><span class="line">bin_2   lower_bound: <span class="number">2206.0</span>, upper_bound: <span class="number">3286.0</span>, distinct_count: <span class="number">1124</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">bin_251 lower_bound: <span class="number">276665.0</span>, upper_bound: <span class="number">277768.0</span>, distinct_count: <span class="number">1041</span></span><br><span class="line">bin_252 lower_bound: <span class="number">277768.0</span>, upper_bound: <span class="number">278870.0</span>, distinct_count: <span class="number">1098</span></span><br><span class="line">bin_253 lower_bound: <span class="number">278870.0</span>, upper_bound: <span class="number">280000.0</span>, distinct_count: <span class="number">1106</span></span><br></pre></td></tr></table></figure>
+<p>从上图可见，生成的 histogram 为 equal-height histogram，且高度为 1102.36，bin 数为 254。其中 bin 个数可由 spark.sql.statistics.histogram.numBins 配置。对于每个 bin，匀记录其最小值，最大值，以及 distinct count。</p>
+<p>值得注意的是，这里的 distinct count 并不是精确值，而是通过 HyperLogLog 计算出来的近似值。使用 HyperLogLog 的原因有二</p>
+<ul>
+<li>使用 HyperLogLog 计算 distinct count 速度快速</li>
+<li>HyperLogLog 计算出的 distinct count 可以合并。例如可以直接将两个 bin 的 HyperLogLog 值合并算出这两个 bin 总共的 distinct count，而无须从重新计算，且合并结果的误差可控</li>
+</ul>
+<h2 id="算子对数据集影响估计"><a href="#算子对数据集影响估计" class="headerlink" title="算子对数据集影响估计"></a>算子对数据集影响估计</h2><p>对于中间算子，可以根据输入数据集的统计信息以及算子的特性，可以估算出输出数据集的统计结果。<br><!--
+![Spark SQL CBO Operator Estimation](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_operator_estimation.png)
+--></p>
+<div align="center"><br><img width="60%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_operator_estimation.png" alt="Spark SQL CBO Operator Estimation"><br></div>
+
+<p>本节以 Filter 为例说明算子对数据集的影响。</p>
+<p>对于常见的 <code>Column A &lt; value B</code> Filter，可通过如下方式估算输出中间结果的统计信息</p>
+<ul>
+<li>若 B &lt; A.min，则无数据被选中，输出结果为空</li>
+<li>若 B &gt; A.max，则全部数据被选中，输出结果与 A 相同，且统计信息不变</li>
+<li>若 A.min &lt; B &lt; A.max，则被选中的数据占比为 (B.value - A.min) / (A.max - A.min)，A.min 不变，A.max 更新为 B.value，A.ndv = A.ndv * (B.value - A.min) / (A.max - A.min)</li>
+</ul>
+<div align="center"><br><img width="70%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_filter_estimation.png" alt="Spark SQL CBO Filter Estimation"><br></div><br><!--
+![Spark SQL CBO Filter Estimation](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_filter_estimation.png)
+--><br><br>上述估算的前提是，字段 A 数据均匀分布。但很多时候，数据分布并不均匀，且当数据倾斜严重是，上述估算误差较大。此时，可充分利用 histogram 进行更精确的估算<br><br><div align="center"><br><img width="70%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_equal_height_histogram.png" alt="Spark SQL CBO Filter Estimation with Histogram"><br></div>
+
+<!--
+![Spark SQL CBO Filter Estimation with Histogram](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_equal_height_histogram.png)
+-->
+<p>启用 Historgram 后，Filter <code>Column A &lt; value B</code>的估算方法为</p>
+<ul>
+<li>若 B &lt; A.min，则无数据被选中，输出结果为空</li>
+<li>若 B &gt; A.max，则全部数据被选中，输出结果与 A 相同，且统计信息不变</li>
+<li>若 A.min &lt; B &lt; A.max，则被选中的数据占比为 height(&lt;B) / height(All)，A.min 不变，A.max = B.value，A.ndv = ndv(&lt;B)</li>
+</ul>
+<p>在上图中，B.value = 15，A.min = 0，A.max = 32，bin 个数为 10。Filter 后 A.ndv = ndv(&lt;B.value) = ndv(&lt;15)。该值可根据 A &lt; 15 的 5 个 bin 的 ndv 通过 HyperLogLog 合并而得，无须重新计算所有 A &lt; 15 的数据。</p>
+<h2 id="算子代价估计"><a href="#算子代价估计" class="headerlink" title="算子代价估计"></a>算子代价估计</h2><p>SQL 中常见的操作有 Selection（由 select 语句表示），Filter（由 where 语句表示）以及笛卡尔乘积（由 join 语句表示）。其中代价最高的是 join。</p>
+<p>Spark SQL 的 CBO 通过如下方法估算 join 的代价<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Cost = rows * weight + size * (1 - weight)</span><br><span class="line">Cost = CostCPU * weight + CostIO * (1 - weight)</span><br></pre></td></tr></table></figure></p>
+<p>其中 rows 即记录行数代表了 CPU 代价，size 代表了 IO 代价。weight 由 spark.sql.cbo.joinReorder.card.weight 决定，其默认值为 0.7。</p>
+<h1 id="Build侧选择"><a href="#Build侧选择" class="headerlink" title="Build侧选择"></a>Build侧选择</h1><p>对于两表Hash Join，一般选择小表作为build size，构建哈希表，另一边作为 probe side。未开启 CBO 时，根据表原始数据大小选择 t2 作为build side</p>
+<p><div align="center"><br><img width="60%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_build_side.png" alt="Spark SQL build side without CBO"><br></div><br><!--
+![Spark SQL build side without CBO](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_build_side.png)
+--></p>
+<p>而开启 CBO 后，基于估计的代价选择 t1 作为 build side。更适合本例</p>
+<p><div align="center"><br><img width="60%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_build_side_selection.png" alt="Spark SQL build side with CBO"><br></div><br><!--
+![Spark SQL build side with CBO](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_build_side_selection.png)
+--></p>
+<h1 id="优化-Join-类型"><a href="#优化-Join-类型" class="headerlink" title="优化 Join 类型"></a>优化 Join 类型</h1><p>在 Spark SQL 中，Join 可分为 Shuffle based Join 和 BroadcastJoin。Shuffle based Join 需要引入 Shuffle，代价相对较高。BroadcastJoin 无须 Join，但要求至少有一张表足够小，能通过 Spark 的 Broadcast 机制广播到每个 Executor 中。</p>
+<p>在不开启 CBO 中，Spark SQL 通过 spark.sql.autoBroadcastJoinThreshold 判断是否启用 BroadcastJoin。其默认值为 10485760 即 10 MB。</p>
+<p>并且该判断基于参与 Join 的表的原始大小。</p>
+<p>在下图示例中，Table 1 大小为 1 TB，Table 2 大小为 20 GB，因此在对二者进行 join 时，由于二者都远大于自动 BroatcastJoin 的阈值，因此 Spark SQL 在未开启 CBO 时选用 SortMergeJoin 对二者进行 Join。</p>
+<p>而开启 CBO 后，由于 Table 1 经过 Filter 1 后结果集大小为 500 GB，Table 2 经过 Filter 2 后结果集大小为 10 MB 低于自动 BroatcastJoin 阈值，因此 Spark SQL 选用 BroadcastJoin。</p>
+<p><div align="center"><br><img width="70%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_join_type.png" alt="Spark SQL join type selection with CBO"><br></div><br><!--
+![Spark SQL join type selection with CBO](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_join_type.png)
+--></p>
+<h1 id="优化多表-Join-顺序"><a href="#优化多表-Join-顺序" class="headerlink" title="优化多表 Join 顺序"></a>优化多表 Join 顺序</h1><p>未开启 CBO 时，Spark SQL 按 SQL 中 join 顺序进行 Join。极端情况下，整个 Join 可能是 left-deep tree。在下图所示 TPC-DS Q25 中，多路 Join 存在如下问题，因此耗时 241 秒。</p>
+<ul>
+<li>left-deep tree，因此所有后续 Join 都依赖于前面的 Join 结果，各 Join 间无法并行进行</li>
+<li>前面的两次 Join 输入输出数据量均非常大，属于大 Join，执行时间较长</li>
+</ul>
+<p><div align="center"><br><img width="70%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_linear_join.png" alt="Spark SQL multi join"><br></div><br><!--
+![Spark SQL multi join](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_linear_join.png)
+--></p>
+<p>开启 CBO 后， Spark SQL 将执行计划优化如下</p>
+<p><div align="center"><br><img width="70%" src="http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_join_reorder.png" alt="Spark SQL multi join reorder with CBO"><br></div><br><!--
+![Spark SQL multi join reorder with CBO](http://www.jasongj.com/img/spark/spark3_cbo/spark_cbo_join_reorder.png)
+--></p>
+<p>优化后的 Join 有如下优势，因此执行时间降至 71 秒</p>
+<ul>
+<li>Join 树不再是 left-deep tree，因此 Join 3 与 Join 4 可并行进行，Join 5 与 Join 6 可并行进行</li>
+<li>最大的 Join 5 输出数据只有两百万条结果，Join 6 有 1.49 亿条结果，Join 7相当于小 Join</li>
+</ul>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'spark/cbo/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/spark/rbo/" rel="next" title="Spark SQL / Catalyst 内部原理 与 RBO">
+                <i class="fa fa-chevron-left"></i> Spark SQL / Catalyst 内部原理 与 RBO
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/spark/committer/" rel="prev" title="Spark OutputCommitter 保证数据一致性">
+                Spark OutputCommitter 保证数据一致性 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/spark/cbo/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/spark/cbo/'),
+                identifier: decodeURI('/spark/cbo/'),
+                title: 'Spark SQL 性能优化再进一步 CBO 基于代价的优化',
+                slug: 'spark/cbo/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">47</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://yuzhouwan.com/" title="博客推荐-宇宙湾" target="_blank">博客推荐-宇宙湾</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark-CBO-背景"><span class="nav-number">1.</span> <span class="nav-text">Spark CBO 背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark-CBO-原理"><span class="nav-number">2.</span> <span class="nav-text">Spark CBO 原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Statistics-收集"><span class="nav-number">2.1.</span> <span class="nav-text">Statistics 收集</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#算子对数据集影响估计"><span class="nav-number">2.2.</span> <span class="nav-text">算子对数据集影响估计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#算子代价估计"><span class="nav-number">2.3.</span> <span class="nav-text">算子代价估计</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Build侧选择"><span class="nav-number">3.</span> <span class="nav-text">Build侧选择</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#优化-Join-类型"><span class="nav-number">4.</span> <span class="nav-text">优化 Join 类型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#优化多表-Join-顺序"><span class="nav-number">5.</span> <span class="nav-text">优化多表 Join 顺序</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/spark/cbo/';
+          this.page.identifier = 'spark/cbo/';
+          this.page.title = 'spark/cbo/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</body>
+</html>

@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文详细阐述了Kafka的性能测试方法，并全面展示了Kafka各组件的性能测试报告。">
+<meta name="keywords" content="kafka,大数据,集群,消息系统,消息总线,技术世界,郭俊 Jason,kafka 架构,大数据架构,kafka 性能,kafka benchmark">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告">
 <meta property="og:url" content="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文详细阐述了Kafka的性能测试方法，并全面展示了Kafka各组件的性能测试报告。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn5/jconsole.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn5/addcluster.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn5/producerlinear.png">
@@ -508,7 +510,7 @@
 
       
         <blockquote>
-<p>原创文章，转载请务必将下面这段话置于文章开头处。（已授权<a href="http://www.infoq.com/cn/articles/kafka-analysis-part-5" target="_blank" rel="external">InfoQ中文站发布</a>）<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark">原文链接</a>　<a href="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark">http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark</a></p>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。（已授权<a href="http://www.infoq.com/cn/articles/kafka-analysis-part-5" target="_blank" rel="noopener">InfoQ中文站发布</a>）<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark">原文链接</a>　<a href="http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark">http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark</a></p>
 </blockquote>
 <h1 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h1><p>　　本文主要介绍了如何利用Kafka自带的性能测试脚本及Kafka Manager测试Kafka的性能，以及如何使用Kafka Manager监控Kafka的工作状态，最后给出了Kafka的性能测试报告。</p>
 <h1 id="性能测试及集群监控工具"><a href="#性能测试及集群监控工具" class="headerlink" title="性能测试及集群监控工具"></a>性能测试及集群监控工具</h1><p>　　Kafka提供了非常多有用的工具，如<a href="http://www.jasongj.com/2015/06/08/KafkaColumn3/">Kafka设计解析（三）- Kafka High Availability （下）</a>中提到的运维类工具——Partition Reassign Tool，Preferred Replica Leader Election Tool，Replica Verification Tool，State Change Log Merge Tool。本文将介绍Kafka提供的性能测试工具，Metrics报告工具及Yahoo开源的Kafka Manager。</p>
@@ -516,10 +518,10 @@
 <li><code>$KAFKA_HOME/bin/kafka-producer-perf-test.sh</code> 该脚本被设计用于测试Kafka Producer的性能，主要输出4项指标，总共发送消息量（以MB为单位），每秒发送消息量（MB/second），发送消息总数，每秒发送消息数（records/second）。除了将测试结果输出到标准输出外，该脚本还提供CSV Reporter，即将结果以CSV文件的形式存储，便于在其它分析工具中使用该测试结果</li>
 <li><code>$KAFKA_HOME/bin/kafka-consumer-perf-test.sh</code> 该脚本用于测试Kafka Consumer的性能，测试指标与Producer性能测试脚本一样</li>
 </ul>
-<h2 id="Kafka-Metrics"><a href="#Kafka-Metrics" class="headerlink" title="Kafka Metrics"></a>Kafka Metrics</h2><p>　　Kafka使用<a href="http://metrics.dropwizard.io" target="_blank" rel="external">Yammer Metrics</a>来报告服务端和客户端的Metric信息。Yammer Metrics 3.1.0提供6种形式的Metrics收集——Meters，Gauges，Counters，Histograms，Timers，Health Checks。与此同时，Yammer Metrics将Metric的收集与报告（或者说发布）分离，可以根据需要自由组合。目前它支持的Reporter有Console Reporter，JMX Reporter，HTTP Reporter，CSV Reporter，SLF4J Reporter，Ganglia Reporter，Graphite Reporter。因此，Kafka也支持通过以上几种Reporter输出其Metrics信息。</p>
+<h2 id="Kafka-Metrics"><a href="#Kafka-Metrics" class="headerlink" title="Kafka Metrics"></a>Kafka Metrics</h2><p>　　Kafka使用<a href="http://metrics.dropwizard.io" target="_blank" rel="noopener">Yammer Metrics</a>来报告服务端和客户端的Metric信息。Yammer Metrics 3.1.0提供6种形式的Metrics收集——Meters，Gauges，Counters，Histograms，Timers，Health Checks。与此同时，Yammer Metrics将Metric的收集与报告（或者说发布）分离，可以根据需要自由组合。目前它支持的Reporter有Console Reporter，JMX Reporter，HTTP Reporter，CSV Reporter，SLF4J Reporter，Ganglia Reporter，Graphite Reporter。因此，Kafka也支持通过以上几种Reporter输出其Metrics信息。</p>
 <h3 id="使用JConsole查看单服务器Metrics"><a href="#使用JConsole查看单服务器Metrics" class="headerlink" title="使用JConsole查看单服务器Metrics"></a>使用JConsole查看单服务器Metrics</h3><p>　　使用JConsole通过JMX，是在不安装其它工具（既然已经安装了Kafka，就肯定安装了Java，而JConsole是Java自带的工具）的情况下查看Kafka服务器Metrics的最简单最方便的方法之一。<br>　　首先必须通过为环境变量JMX_PORT设置有效值来启用Kafka的JMX Reporter。如<code>export JMX_PORT=19797</code>。然后即可使用JConsole通过上面设置的端口来访问某一台Kafka服务器来查看其Metrics信息，如下图所示。</p>
 <p><img src="http://www.jasongj.com/img/kafka/KafkaColumn5/jconsole.png" alt="JConsole Kafka JMX"><br>　　使用JConsole的一个好处是不用安装额外的工具，缺点很明显，数据展示不够直观，数据组织形式不友好，更重要的是不能同时监控整个集群的Metrics。在上图中，在kafka.cluster-&gt;Partition-&gt;UnderReplicated-&gt;topic4下，只有2和5两个节点，这并非因为topic4只有这两个Partition的数据是处于复制状态的。事实上，topic4在该Broker上只有这2个Partition，其它Partition在其它Broker上，所以通过该服务器的JMX Reporter只看到了这两个Partition。</p>
-<h3 id="通过Kafka-Manager查看整个集群的Metrics"><a href="#通过Kafka-Manager查看整个集群的Metrics" class="headerlink" title="通过Kafka Manager查看整个集群的Metrics"></a>通过Kafka Manager查看整个集群的Metrics</h3><p>　　<a href="https://github.com/yahoo/kafka-manager" target="_blank" rel="external">Kafka Manager</a>是Yahoo开源的Kafka管理工具。它支持如下功能</p>
+<h3 id="通过Kafka-Manager查看整个集群的Metrics"><a href="#通过Kafka-Manager查看整个集群的Metrics" class="headerlink" title="通过Kafka Manager查看整个集群的Metrics"></a>通过Kafka Manager查看整个集群的Metrics</h3><p>　　<a href="https://github.com/yahoo/kafka-manager" target="_blank" rel="noopener">Kafka Manager</a>是Yahoo开源的Kafka管理工具。它支持如下功能</p>
 <ul>
 <li>管理多个集群</li>
 <li>方便查看集群状态</li>
@@ -638,9 +640,9 @@
           
             <a href="/tags/big-data/" rel="tag"># big data</a>
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
-          
             <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
             <a href="/tags/Kafka/" rel="tag"># Kafka</a>
           
@@ -772,7 +774,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -903,7 +905,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -920,7 +922,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1247,5 +1249,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

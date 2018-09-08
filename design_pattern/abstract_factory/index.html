@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文介绍了抽象工厂模式的概念，UML类图，优缺点，实现方式以及（未）遵循的OOP原则。同时结合J2EE中常用的DAO实例详解了抽象工厂模式的实现。">
+<meta name="keywords" content="java,Java,java 抽象工厂,设计模式,抽象工厂模式,java 设计模式,技术世界,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java设计模式（三） 抽象工厂模式">
 <meta property="og:url" content="http://www.jasongj.com/design_pattern/abstract_factory/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了抽象工厂模式的概念，UML类图，优缺点，实现方式以及（未）遵循的OOP原则。同时结合J2EE中常用的DAO实例详解了抽象工厂模式的实现。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/designpattern/abstractfactory/abstract_factory.png">
 <meta property="og:updated_time" content="2017-02-17T12:31:23.000Z">
 <meta name="twitter:card" content="summary">
@@ -453,7 +455,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  2,614
+                  2,676
                 </span>
               
 
@@ -491,8 +493,8 @@
 <li>具体工厂，如果MySQLFactory</li>
 <li>产品族，如Oracle产品族，包含OracleUserDao，OracleRoleDao，OracleProductDao</li>
 </ul>
-<h2 id="抽象工厂模式使用方式"><a href="#抽象工厂模式使用方式" class="headerlink" title="抽象工厂模式使用方式"></a>抽象工厂模式使用方式</h2><p>与工厂方法模式类似，在创建具体产品时，客户端通过实例化具体的工厂类，并调用其创建目标产品的方法创建具体产品类的实例。根据依赖倒置原则，具体工厂类的实例由工厂接口引用，具体产品的实例由产品接口引用。具体调用代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.jasongj.client;</div><div class="line"></div><div class="line"><span class="keyword">import</span> com.jasongj.bean.Product;</div><div class="line"><span class="keyword">import</span> com.jasongj.bean.User;</div><div class="line"><span class="keyword">import</span> com.jasongj.dao.role.IRoleDao;</div><div class="line"><span class="keyword">import</span> com.jasongj.dao.user.IUserDao;</div><div class="line"><span class="keyword">import</span> com.jasongj.dao.user.product.IProductDao;</div><div class="line"><span class="keyword">import</span> com.jasongj.factory.IDaoFactory;</div><div class="line"><span class="keyword">import</span> com.jasongj.factory.MySQLDaoFactory;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Client</span> </span>&#123;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</div><div class="line">    IDaoFactory factory = <span class="keyword">new</span> MySQLDaoFactory();</div><div class="line"></div><div class="line">    IUserDao userDao = factory.createUserDao();</div><div class="line">    User user = <span class="keyword">new</span> User();</div><div class="line">    user.setUsername(<span class="string">"demo"</span>);</div><div class="line">    user.setPassword(<span class="string">"demo"</span>.toCharArray());</div><div class="line">    userDao.addUser(user);</div><div class="line"></div><div class="line">    IRoleDao roleDao = factory.createRoleDao();</div><div class="line">    roleDao.getRole(<span class="string">"admin"</span>);</div><div class="line"></div><div class="line">    IProductDao productDao = factory.createProductDao();</div><div class="line">    Product product = <span class="keyword">new</span> Product();</div><div class="line">    productDao.removeProduct(product);</div><div class="line"></div><div class="line">  &#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="抽象工厂模式案例解析"><a href="#抽象工厂模式案例解析" class="headerlink" title="抽象工厂模式案例解析"></a>抽象工厂模式案例解析</h2><p>本文所述抽象工厂模式示例代码可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/AbstractFactoryPattern/src/main" target="_blank" rel="external">作者Github</a>下载</p>
+<h2 id="抽象工厂模式使用方式"><a href="#抽象工厂模式使用方式" class="headerlink" title="抽象工厂模式使用方式"></a>抽象工厂模式使用方式</h2><p>与工厂方法模式类似，在创建具体产品时，客户端通过实例化具体的工厂类，并调用其创建目标产品的方法创建具体产品类的实例。根据依赖倒置原则，具体工厂类的实例由工厂接口引用，具体产品的实例由产品接口引用。具体调用代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jasongj.client;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.jasongj.bean.Product;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.bean.User;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.dao.role.IRoleDao;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.dao.user.IUserDao;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.dao.user.product.IProductDao;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.factory.IDaoFactory;</span><br><span class="line"><span class="keyword">import</span> com.jasongj.factory.MySQLDaoFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Client</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    IDaoFactory factory = <span class="keyword">new</span> MySQLDaoFactory();</span><br><span class="line"></span><br><span class="line">    IUserDao userDao = factory.createUserDao();</span><br><span class="line">    User user = <span class="keyword">new</span> User();</span><br><span class="line">    user.setUsername(<span class="string">"demo"</span>);</span><br><span class="line">    user.setPassword(<span class="string">"demo"</span>.toCharArray());</span><br><span class="line">    userDao.addUser(user);</span><br><span class="line"></span><br><span class="line">    IRoleDao roleDao = factory.createRoleDao();</span><br><span class="line">    roleDao.getRole(<span class="string">"admin"</span>);</span><br><span class="line"></span><br><span class="line">    IProductDao productDao = factory.createProductDao();</span><br><span class="line">    Product product = <span class="keyword">new</span> Product();</span><br><span class="line">    productDao.removeProduct(product);</span><br><span class="line"></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="抽象工厂模式案例解析"><a href="#抽象工厂模式案例解析" class="headerlink" title="抽象工厂模式案例解析"></a>抽象工厂模式案例解析</h2><p>本文所述抽象工厂模式示例代码可从<a href="https://github.com/habren/JavaDesignPattern/tree/master/AbstractFactoryPattern/src/main" target="_blank" rel="noopener">作者Github</a>下载</p>
 <p>上例是J2EE开发中常用的DAO（Data Access Object），操作对象（如User和Role，对应于数据库中表的记录）需要对应的DAO类。</p>
 <p>在实际项目开发中，经常会碰到要求使用其它类型的数据库，而不希望过多修改已有代码。因此，需要为每种DAO创建一个DAO接口（如IUserDao，IRoleDao和IProductDao），同时为不同数据库实现相应的具体类。</p>
 <p>调用方依赖于DAO接口而非具体实现（依赖倒置原则），因此切换数据库时，调用方代码无需修改。</p>
@@ -735,7 +737,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -866,7 +868,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -883,7 +885,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1210,5 +1212,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

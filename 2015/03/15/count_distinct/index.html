@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文介绍了distinct count的SQL优化方法，以及常用的高效近似算法及其在PostgreSQL上的实现。">
+<meta name="keywords" content="SQL,sql,sql优化,sql distinct,PostgreSQL,postgres,count distinct,uv,unique,郭俊 Jason,大数据架构">
 <meta property="og:type" content="article">
 <meta property="og:title" content="SQL优化（二） 快速计算Distinct Count">
 <meta property="og:url" content="http://www.jasongj.com/2015/03/15/count_distinct/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文介绍了distinct count的SQL优化方法，以及常用的高效近似算法及其在PostgreSQL上的实现。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2017-03-15T13:17:39.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SQL优化（二） 快速计算Distinct Count">
@@ -473,7 +475,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  3,885
+                  4,152
                 </span>
               
 
@@ -530,8 +532,8 @@
 </tbody>
 </table>
 <p>　　并插入1000万条记录，并保证mac_bigint为mac_macaddr去掉冒号后的16进制转换而成的10进制bigint，而mac_text为mac_macaddr的文本形式，从而保证在这三个字段上查询的结果，并且复杂度相同。</p>
-<p>　　count distinct SQL如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">select</span> </div><div class="line">    <span class="keyword">count</span>(<span class="keyword">distinct</span> mac_macaddr) </div><div class="line"><span class="keyword">from</span> </div><div class="line">    testmac</div></pre></td></tr></table></figure></p>
-<p>　　count group by SQL如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">select</span></div><div class="line">    <span class="keyword">count</span>(*)</div><div class="line"><span class="keyword">from</span></div><div class="line">    (<span class="keyword">select</span></div><div class="line">        mac_macaddr</div><div class="line">    <span class="keyword">from</span></div><div class="line">        testmac</div><div class="line">    <span class="keyword">group</span> <span class="keyword">by</span></div><div class="line">        <span class="number">1</span>) foo</div></pre></td></tr></table></figure></p>
+<p>　　count distinct SQL如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> </span><br><span class="line">    <span class="keyword">count</span>(<span class="keyword">distinct</span> mac_macaddr) </span><br><span class="line"><span class="keyword">from</span> </span><br><span class="line">    testmac</span><br></pre></td></tr></table></figure></p>
+<p>　　count group by SQL如下<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span></span><br><span class="line">    <span class="keyword">count</span>(*)</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    (<span class="keyword">select</span></span><br><span class="line">        mac_macaddr</span><br><span class="line">    <span class="keyword">from</span></span><br><span class="line">        testmac</span><br><span class="line">    <span class="keyword">group</span> <span class="keyword">by</span></span><br><span class="line">        <span class="number">1</span>) foo</span><br></pre></td></tr></table></figure></p>
 <p>　　对于不同记录数较大的情景（1000万条记录中，有300多万条不同记录），查询时间（单位毫秒）如下表所示。</p>
 <table>
 <thead>
@@ -582,9 +584,9 @@
 </tr>
 </tbody>
 </table>
-<p>　　从上面两组实验可看出，在不同记录数较小时，count group by性能普遍高于count distinct，尤其对于text类型表现的更明显。而对于不同记录数较大的场景，count group by性能反而低于直接count distinct。为什么会造成这种差异呢，我们以macaddr类型为例来对比不同结果集下count group by的query plan。<br>　　当结果集较小时，planner会使用HashAggregation。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">explain analyze select count(*) from (select mac_macaddr from testmac_small group by 1) foo;</div><div class="line">                                        QUERY PLAN</div><div class="line"> Aggregate  (cost=668465.04..668465.05 rows=1 width=0) (actual time=9166.486..9166.486 rows=1 loops=1)</div><div class="line">   -&gt;  HashAggregate  (cost=668296.74..668371.54 rows=7480 width=6) (actual time=9161.796..9164.393 rows=10001 loops=1)</div><div class="line">         -&gt;  Seq Scan on testmac_small  (cost=0.00..572898.79 rows=38159179 width=6) (actual time=323.338..5091.112 rows=10000000 l</div><div class="line">oops=1)</div></pre></td></tr></table></figure></p>
-<p>　　而当结果集较大时，无法通过在内存中维护Hash表的方式使用HashAggregation，planner会使用GroupAggregation，并会用到排序，而且因为目标数据集太大，无法在内存中使用Quick Sort，而要在外存中使用Merge Sort，而这就极大的增加了I/O开销。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">explain analyze select count(*) from (select mac_macaddr from testmac group by 1) foo;</div><div class="line">                                        QUERY PLAN</div><div class="line"> Aggregate  (cost=1881542.62..1881542.63 rows=1 width=0) (actual time=34288.232..34288.232 rows=1 loops=1)</div><div class="line">   -&gt;  Group  (cost=1794262.09..1844329.41 rows=2977057 width=6) (actual time=25291.372..33481.228 rows=3671797 loops=1)</div><div class="line">         -&gt;  Sort  (cost=1794262.09..1819295.75 rows=10013464 width=6) (actual time=25291.366..29907.351 rows=10000000 loops=1)</div><div class="line">               Sort Key: testmac.mac_macaddr</div><div class="line">               Sort Method: external merge  Disk: 156440kB</div><div class="line">               -&gt;  Seq Scan on testmac  (cost=0.00..219206.64 rows=10013464 width=6) (actual time=0.082..4312.053 rows=10000000 loo</div><div class="line">ps=1)</div></pre></td></tr></table></figure></p>
-<h1 id="dinstinct-count高效近似算法"><a href="#dinstinct-count高效近似算法" class="headerlink" title="dinstinct count高效近似算法"></a>dinstinct count高效近似算法</h1><p>　　由于distinct count的需求非常普遍（如互联网中计算UV），而该计算的代价又相比较高，很难适应实时性要求较高的场景，如流计算，因此有很多相关研究试图解决该问题。比较著名的算法有<a href="http://en.wikipedia.org/wiki/Adaptive_sampling" target="_blank" rel="external">daptive sampling Algorithm</a>，<a href="http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4812493&amp;tag=1" target="_blank" rel="external">Distinct Counting with a Self-Learning Bitmap</a>，<a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf" target="_blank" rel="external">HyperLogLog</a>，<a href="http://algo.inria.fr/flajolet/Publications/DuFl03-LNCS.pdf" target="_blank" rel="external">LogLog</a>，<a href="http://www.mathcs.emory.edu/~cheung/papers/StreamDB/Probab/1985-Flajolet-Probabilistic-counting.pdf" target="_blank" rel="external">Probabilistic Counting Algorithms</a>。这些算法都不能精确计算distinct count，都是在保证误差较小的情况下高效计算出结果。本文分别就这几种算法做了两组实验。</p>
+<p>　　从上面两组实验可看出，在不同记录数较小时，count group by性能普遍高于count distinct，尤其对于text类型表现的更明显。而对于不同记录数较大的场景，count group by性能反而低于直接count distinct。为什么会造成这种差异呢，我们以macaddr类型为例来对比不同结果集下count group by的query plan。<br>　　当结果集较小时，planner会使用HashAggregation。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">explain</span> <span class="keyword">analyze</span> <span class="keyword">select</span> <span class="keyword">count</span>(*) <span class="keyword">from</span> (<span class="keyword">select</span> mac_macaddr <span class="keyword">from</span> testmac_small <span class="keyword">group</span> <span class="keyword">by</span> <span class="number">1</span>) foo;</span><br><span class="line">                                        QUERY PLAN</span><br><span class="line"> Aggregate  (cost=668465.04..668465.05 rows=1 width=0) (actual time=9166.486..9166.486 rows=1 loops=1)</span><br><span class="line">   -&gt;  HashAggregate  (cost=668296.74..668371.54 rows=7480 width=6) (actual time=9161.796..9164.393 rows=10001 loops=1)</span><br><span class="line">         -&gt;  Seq Scan on testmac_small  (cost=0.00..572898.79 rows=38159179 width=6) (actual time=323.338..5091.112 rows=10000000 l</span><br><span class="line">oops=1)</span><br></pre></td></tr></table></figure></p>
+<p>　　而当结果集较大时，无法通过在内存中维护Hash表的方式使用HashAggregation，planner会使用GroupAggregation，并会用到排序，而且因为目标数据集太大，无法在内存中使用Quick Sort，而要在外存中使用Merge Sort，而这就极大的增加了I/O开销。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">explain</span> <span class="keyword">analyze</span> <span class="keyword">select</span> <span class="keyword">count</span>(*) <span class="keyword">from</span> (<span class="keyword">select</span> mac_macaddr <span class="keyword">from</span> testmac <span class="keyword">group</span> <span class="keyword">by</span> <span class="number">1</span>) foo;</span><br><span class="line">                                        QUERY PLAN</span><br><span class="line"> Aggregate  (cost=1881542.62..1881542.63 rows=1 width=0) (actual time=34288.232..34288.232 rows=1 loops=1)</span><br><span class="line">   -&gt;  Group  (cost=1794262.09..1844329.41 rows=2977057 width=6) (actual time=25291.372..33481.228 rows=3671797 loops=1)</span><br><span class="line">         -&gt;  Sort  (cost=1794262.09..1819295.75 rows=10013464 width=6) (actual time=25291.366..29907.351 rows=10000000 loops=1)</span><br><span class="line">               Sort Key: testmac.mac_macaddr</span><br><span class="line">               Sort Method: external <span class="keyword">merge</span>  Disk: <span class="number">156440</span>kB</span><br><span class="line">               -&gt;  Seq <span class="keyword">Scan</span> <span class="keyword">on</span> testmac  (<span class="keyword">cost</span>=<span class="number">0.00</span>.<span class="number">.219206</span><span class="number">.64</span> <span class="keyword">rows</span>=<span class="number">10013464</span> width=<span class="number">6</span>) (actual <span class="keyword">time</span>=<span class="number">0.082</span>.<span class="number">.4312</span><span class="number">.053</span> <span class="keyword">rows</span>=<span class="number">10000000</span> loo</span><br><span class="line">ps=<span class="number">1</span>)</span><br></pre></td></tr></table></figure></p>
+<h1 id="dinstinct-count高效近似算法"><a href="#dinstinct-count高效近似算法" class="headerlink" title="dinstinct count高效近似算法"></a>dinstinct count高效近似算法</h1><p>　　由于distinct count的需求非常普遍（如互联网中计算UV），而该计算的代价又相比较高，很难适应实时性要求较高的场景，如流计算，因此有很多相关研究试图解决该问题。比较著名的算法有<a href="http://en.wikipedia.org/wiki/Adaptive_sampling" target="_blank" rel="noopener">daptive sampling Algorithm</a>，<a href="http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4812493&amp;tag=1" target="_blank" rel="noopener">Distinct Counting with a Self-Learning Bitmap</a>，<a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf" target="_blank" rel="noopener">HyperLogLog</a>，<a href="http://algo.inria.fr/flajolet/Publications/DuFl03-LNCS.pdf" target="_blank" rel="noopener">LogLog</a>，<a href="http://www.mathcs.emory.edu/~cheung/papers/StreamDB/Probab/1985-Flajolet-Probabilistic-counting.pdf" target="_blank" rel="noopener">Probabilistic Counting Algorithms</a>。这些算法都不能精确计算distinct count，都是在保证误差较小的情况下高效计算出结果。本文分别就这几种算法做了两组实验。</p>
 <ul>
 <li>数据集100万条，每条记录均不相同，几种算法耗时及内存使用如下。</li>
 </ul>
@@ -703,7 +705,7 @@
 </table>
 <p>　　<br>　　从上面两组实验可看出，大部分的近似算法工作得都很好，其速度都比简单的count distinct要快很多，而且它们对内存的使用并不多而结果去非常好，尤其是Adaptive Sampling和Self-learning Bitmap，误差一般不超过1%，性能却比简单的count distinct高十几倍乃至几十倍。
 　　</p>
-<h1 id="distinct-count结果合并"><a href="#distinct-count结果合并" class="headerlink" title="distinct count结果合并"></a>distinct count结果合并</h1><p>　　如上几种近似算法可以极大提高distinct count的效率，但对于data warehouse来说，数据量非常大，可能存储了几年的数据，为了提高查询速度，对于sum及avg这些aggregation一般会创建一些aggregation table。比如如果要算过去三年的总营业额，那可以创建一张daily/monthly aggregation table，基于daily/monthly表去计算三年的营业额。但对于distinct count，即使创建了daily/monthly aggregation table，也没办法通过其计算三年的数值。这里有种新的数据类型hll，这是一种<a href="http://research.neustar.biz/2012/10/25/sketch-of-the-day-hyperloglog-cornerstone-of-a-big-data-infrastructure/" target="_blank" rel="external">HyperLogLog</a>数据结构。一个1280字节的hll能计算几百亿的不同数值并且保证只有很小的误差。<br>　　首先创建一张表(fact)，结构如下</p>
+<h1 id="distinct-count结果合并"><a href="#distinct-count结果合并" class="headerlink" title="distinct count结果合并"></a>distinct count结果合并</h1><p>　　如上几种近似算法可以极大提高distinct count的效率，但对于data warehouse来说，数据量非常大，可能存储了几年的数据，为了提高查询速度，对于sum及avg这些aggregation一般会创建一些aggregation table。比如如果要算过去三年的总营业额，那可以创建一张daily/monthly aggregation table，基于daily/monthly表去计算三年的营业额。但对于distinct count，即使创建了daily/monthly aggregation table，也没办法通过其计算三年的数值。这里有种新的数据类型hll，这是一种<a href="http://research.neustar.biz/2012/10/25/sketch-of-the-day-hyperloglog-cornerstone-of-a-big-data-infrastructure/" target="_blank" rel="noopener">HyperLogLog</a>数据结构。一个1280字节的hll能计算几百亿的不同数值并且保证只有很小的误差。<br>　　首先创建一张表(fact)，结构如下</p>
 <table>
 <thead>
 <tr>
@@ -729,12 +731,12 @@
 </tr>
 </tbody>
 </table>
-<p>　　插入三年的数据，并保证总共有10万个不同的user_id，总数据量为1亿条（一天10万条左右）。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">insert</span> <span class="keyword">into</span> fact</div><div class="line"><span class="keyword">select</span></div><div class="line">    <span class="keyword">current_date</span> - (random()*<span class="number">1095</span>)::<span class="built_in">integer</span> * <span class="string">'1 day'</span>::<span class="built_in">interval</span>,</div><div class="line">    (random()*<span class="number">100000</span>)::<span class="built_in">integer</span> + <span class="number">1</span>,</div><div class="line">    random() * <span class="number">10000</span> + <span class="number">500</span></div><div class="line"><span class="keyword">from</span></div><div class="line">    generate_series(<span class="number">1</span>, <span class="number">100000000</span>, <span class="number">1</span>);</div></pre></td></tr></table></figure></p>
-<p>　　直接从fact表中查询不同用户的总数，耗时115143.217 ms。<br>    利用hll，创建daily_unique_user_hll表，将每天的不同用户信息存于hll类型的字段中。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">create</span> <span class="keyword">table</span> daily_unique_user_hll </div><div class="line"><span class="keyword">as</span> <span class="keyword">select</span></div><div class="line">    <span class="keyword">day</span>, </div><div class="line">    hll_add_agg(hll_hash_integer(user_id))</div><div class="line"><span class="keyword">from</span> </div><div class="line">    fact</div><div class="line"><span class="keyword">group</span> <span class="keyword">by</span> <span class="number">1</span>;</div></pre></td></tr></table></figure></p>
-<p>　　通过上面的daily aggregation table可计算任意日期范围内的unique user count。如计算整个三年的不同用户数，耗时17.485 ms，查询结果为101044，误差为(101044-100000)/100000=1.044%。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">explain analyze select hll_cardinality(hll_union_agg(hll_add_agg)) from daily_unique_user_hll;</div><div class="line">                                   QUERY PLAN</div><div class="line"> Aggregate  (cost=196.70..196.72 rows=1 width=32) (actual time=16.772..16.772 rows=1 loops=1)</div><div class="line">   -&gt;  Seq Scan on daily_unique_user_hll  (cost=0.00..193.96 rows=1096 width=32) (actual time=0.298..3.251 rows=</div><div class="line">1096 loops=1)</div><div class="line"> Planning time: 0.081 ms</div><div class="line"> Execution time: 16.851 ms</div><div class="line"> Time: 17.485 ms</div></pre></td></tr></table></figure></p>
+<p>　　插入三年的数据，并保证总共有10万个不同的user_id，总数据量为1亿条（一天10万条左右）。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> fact</span><br><span class="line"><span class="keyword">select</span></span><br><span class="line">    <span class="keyword">current_date</span> - (random()*<span class="number">1095</span>)::<span class="built_in">integer</span> * <span class="string">'1 day'</span>::<span class="built_in">interval</span>,</span><br><span class="line">    (random()*<span class="number">100000</span>)::<span class="built_in">integer</span> + <span class="number">1</span>,</span><br><span class="line">    random() * <span class="number">10000</span> + <span class="number">500</span></span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    generate_series(<span class="number">1</span>, <span class="number">100000000</span>, <span class="number">1</span>);</span><br></pre></td></tr></table></figure></p>
+<p>　　直接从fact表中查询不同用户的总数，耗时115143.217 ms。<br>    利用hll，创建daily_unique_user_hll表，将每天的不同用户信息存于hll类型的字段中。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> daily_unique_user_hll </span><br><span class="line"><span class="keyword">as</span> <span class="keyword">select</span></span><br><span class="line">    <span class="keyword">day</span>, </span><br><span class="line">    hll_add_agg(hll_hash_integer(user_id))</span><br><span class="line"><span class="keyword">from</span> </span><br><span class="line">    fact</span><br><span class="line"><span class="keyword">group</span> <span class="keyword">by</span> <span class="number">1</span>;</span><br></pre></td></tr></table></figure></p>
+<p>　　通过上面的daily aggregation table可计算任意日期范围内的unique user count。如计算整个三年的不同用户数，耗时17.485 ms，查询结果为101044，误差为(101044-100000)/100000=1.044%。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">explain</span> <span class="keyword">analyze</span> <span class="keyword">select</span> hll_cardinality(hll_union_agg(hll_add_agg)) <span class="keyword">from</span> daily_unique_user_hll;</span><br><span class="line">                                   QUERY PLAN</span><br><span class="line"> Aggregate  (cost=196.70..196.72 rows=1 width=32) (actual time=16.772..16.772 rows=1 loops=1)</span><br><span class="line">   -&gt;  Seq Scan on daily_unique_user_hll  (cost=0.00..193.96 rows=1096 width=32) (actual time=0.298..3.251 rows=</span><br><span class="line">1096 loops=1)</span><br><span class="line"> Planning time: 0.081 ms</span><br><span class="line"> Execution time: 16.851 ms</span><br><span class="line"> Time: 17.485 ms</span><br></pre></td></tr></table></figure></p>
 <p>　　而如果直接使用count distinct基于fact表计算该值，则耗时长达 127807.105 ms。<br>　　<br>　　从上面的实验中可以看到，hll类型实现了distinct count的合并，并可以通过hll存储各个部分数据集上的distinct count值，并可通过合并这些hll值来快速计算整个数据集上的distinct count值，耗时只有直接使用count distinct在原始数据上计算的1/7308，并且误差非常小，1%左右。
 　　</p>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>　　如果必须要计算精确的distinct count，可以针对不同的情况使用count distinct或者count group by来实现较好的效率，同时对于数据的存储类型，能使用macaddr/intger/bigint的，尽量不要使用text。<br>　　<br>　　另外不必要精确计算，只需要保证误差在可接受的范围之内，或者计算效率更重要时，可以采用本文所介绍的<a href="http://en.wikipedia.org/wiki/Adaptive_sampling" target="_blank" rel="external">daptive sampling Algorithm</a>，<a href="http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4812493&amp;tag=1" target="_blank" rel="external">Distinct Counting with a Self-Learning Bitmap</a>，<a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf" target="_blank" rel="external">HyperLogLog</a>，<a href="http://algo.inria.fr/flajolet/Publications/DuFl03-LNCS.pdf" target="_blank" rel="external">LogLog</a>，<a href="http://www.mathcs.emory.edu/~cheung/papers/StreamDB/Probab/1985-Flajolet-Probabilistic-counting.pdf" target="_blank" rel="external">Probabilistic Counting Algorithms</a>等近似算法。另外，对于data warehouse这种存储数据量随着时间不断超增加且最终数据总量非常巨大的应用场景，可以使用hll这种支持合并dintinct count结果的数据类型，并周期性的（比如daily/weekly/monthly）计算部分数据的distinct值，然后通过合并部分结果的方式得到总结果的方式来快速响应查询请求。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>　　如果必须要计算精确的distinct count，可以针对不同的情况使用count distinct或者count group by来实现较好的效率，同时对于数据的存储类型，能使用macaddr/intger/bigint的，尽量不要使用text。<br>　　<br>　　另外不必要精确计算，只需要保证误差在可接受的范围之内，或者计算效率更重要时，可以采用本文所介绍的<a href="http://en.wikipedia.org/wiki/Adaptive_sampling" target="_blank" rel="noopener">daptive sampling Algorithm</a>，<a href="http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4812493&amp;tag=1" target="_blank" rel="noopener">Distinct Counting with a Self-Learning Bitmap</a>，<a href="http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf" target="_blank" rel="noopener">HyperLogLog</a>，<a href="http://algo.inria.fr/flajolet/Publications/DuFl03-LNCS.pdf" target="_blank" rel="noopener">LogLog</a>，<a href="http://www.mathcs.emory.edu/~cheung/papers/StreamDB/Probab/1985-Flajolet-Probabilistic-counting.pdf" target="_blank" rel="noopener">Probabilistic Counting Algorithms</a>等近似算法。另外，对于data warehouse这种存储数据量随着时间不断超增加且最终数据总量非常巨大的应用场景，可以使用hll这种支持合并dintinct count结果的数据类型，并周期性的（比如daily/weekly/monthly）计算部分数据的distinct值，然后通过合并部分结果的方式得到总结果的方式来快速响应查询请求。</p>
 <h1 id="SQL优化系列"><a href="#SQL优化系列" class="headerlink" title="SQL优化系列"></a>SQL优化系列</h1><ul>
 <li><a href="http://www.jasongj.com/2015/03/07/Join1/">SQL优化（一） Merge Join vs. Hash Join vs. Nested Loop</a></li>
 <li><a href="http://www.jasongj.com/2015/03/15/count_distinct/">SQL优化（二） 快速计算Distinct Count</a></li>
@@ -947,7 +949,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1078,7 +1080,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -1095,7 +1097,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1422,5 +1424,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

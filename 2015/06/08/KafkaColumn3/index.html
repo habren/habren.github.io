@@ -76,11 +76,13 @@
 
 
 <meta name="description" content="本文在上篇文章 基础上，更加深入讲解了Kafka的HA机制，主要阐述了HA相关各种场景，如Broker failover，Controller failover，Topic创建/删除，Broker启动，Follower从Leader fetch数据等详细处理过程。同时介绍了Kafka提供的与Replication相关的工具，如重新分配Partition等。">
+<meta name="keywords" content="kafka,kafka 架构,大数据,集群,消息系统,消息总线,技术世界,郭俊 Jason,大数据架构,kafka ha,kafka 高可用,kafka controller">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kafka设计解析（三）- Kafka High Availability （下）">
 <meta property="og:url" content="http://www.jasongj.com/2015/06/08/KafkaColumn3/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文在上篇文章 基础上，更加深入讲解了Kafka的HA机制，主要阐述了HA相关各种场景，如Broker failover，Controller failover，Topic创建/删除，Broker启动，Follower从Leader fetch数据等详细处理过程。同时介绍了Kafka提供的与Replication相关的工具，如重新分配Partition等。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn2/kafka_broker_failover.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn3/LeaderAndIsrRequest.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn3/LeaderAndIsrResponse.png">
@@ -493,7 +495,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  6,835
+                  6,897
                 </span>
               
 
@@ -519,7 +521,7 @@
 
       
         <blockquote>
-<p>原创文章，转载请务必将下面这段话置于文章开头处。（已授权<a href="http://www.infoq.com/cn/articles/kafka-analysis-part-3" target="_blank" rel="external">InfoQ中文站发布</a>）<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/06/08/KafkaColumn3">原文链接</a>　<a href="http://www.jasongj.com/2015/06/08/KafkaColumn3">http://www.jasongj.com/2015/06/08/KafkaColumn3</a></p>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。（已授权<a href="http://www.infoq.com/cn/articles/kafka-analysis-part-3" target="_blank" rel="noopener">InfoQ中文站发布</a>）<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/2015/06/08/KafkaColumn3">原文链接</a>　<a href="http://www.jasongj.com/2015/06/08/KafkaColumn3">http://www.jasongj.com/2015/06/08/KafkaColumn3</a></p>
 </blockquote>
 <h1 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h1><p>　　本文在上篇文章基础上，更加深入讲解了Kafka的HA机制，主要阐述了HA相关各种场景，如Broker failover，Controller failover，Topic创建/删除，Broker启动，Follower从Leader fetch数据等详细处理过程。同时介绍了Kafka提供的与Replication相关的工具，如重新分配Partition等。</p>
 <h1 id="Broker-Failover过程"><a href="#Broker-Failover过程" class="headerlink" title="Broker Failover过程"></a>Broker Failover过程</h1><h2 id="Controller对Broker-failure的处理过程"><a href="#Controller对Broker-failure的处理过程" class="headerlink" title="Controller对Broker failure的处理过程"></a>Controller对Broker failure的处理过程</h2><ol>
@@ -548,13 +550,13 @@
 <li>关闭所有Idle状态的Fetcher。</li>
 </ol>
 <p>　　LeaderAndIsrRequest处理过程如下图所示<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/LeaderAndIsrRequest_Flow_Chart.png" alt="LeaderAndIsrRequest Flow Chart"></p>
-<h2 id="Broker启动过程"><a href="#Broker启动过程" class="headerlink" title="Broker启动过程"></a>Broker启动过程</h2><p>　　Broker启动后首先根据其ID在Zookeeper的<code>/brokers/ids</code>zonde下创建临时子节点（<a href="http://zookeeper.apache.org/doc/trunk/zookeeperOver.html#Nodes+and+ephemeral+nodes" target="_blank" rel="external">Ephemeral node</a>），创建成功后Controller的ReplicaStateMachine注册其上的Broker Change Watch会被fire，从而通过回调KafkaController.onBrokerStartup方法完成以下步骤：</p>
+<h2 id="Broker启动过程"><a href="#Broker启动过程" class="headerlink" title="Broker启动过程"></a>Broker启动过程</h2><p>　　Broker启动后首先根据其ID在Zookeeper的<code>/brokers/ids</code>zonde下创建临时子节点（<a href="http://zookeeper.apache.org/doc/trunk/zookeeperOver.html#Nodes+and+ephemeral+nodes" target="_blank" rel="noopener">Ephemeral node</a>），创建成功后Controller的ReplicaStateMachine注册其上的Broker Change Watch会被fire，从而通过回调KafkaController.onBrokerStartup方法完成以下步骤：</p>
 <ol>
 <li>向所有新启动的Broker发送UpdateMetadataRequest，其定义如下。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/UpdateMetadataRequest.png" alt="UpdateMetadataRequest"></li>
 <li>将新启动的Broker上的所有Replica设置为OnlineReplica状态，同时这些Broker会为这些Partition启动high watermark线程。</li>
 <li>通过partitionStateMachine触发OnlinePartitionStateChange。</li>
 </ol>
-<h2 id="Controller-Failover"><a href="#Controller-Failover" class="headerlink" title="Controller Failover"></a>Controller Failover</h2><p>Controller也需要Failover。每个Broker都会在Controller Path (<code>/controller</code>)上注册一个Watch。当前Controller失败时，对应的Controller Path会自动消失（因为它是Ephemeral Node），此时该Watch被fire，所有“活”着的Broker都会去竞选成为新的Controller（创建新的Controller Path），但是只会有一个竞选成功（这点由Zookeeper保证）。竞选成功者即为新的Leader，竞选失败者则重新在新的Controller Path上注册Watch。因为<a href="http://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html#ch_zkWatches" target="_blank" rel="external">Zookeeper的Watch是一次性的，被fire一次之后即失效</a>，所以需要重新注册。</p>
+<h2 id="Controller-Failover"><a href="#Controller-Failover" class="headerlink" title="Controller Failover"></a>Controller Failover</h2><p>Controller也需要Failover。每个Broker都会在Controller Path (<code>/controller</code>)上注册一个Watch。当前Controller失败时，对应的Controller Path会自动消失（因为它是Ephemeral Node），此时该Watch被fire，所有“活”着的Broker都会去竞选成为新的Controller（创建新的Controller Path），但是只会有一个竞选成功（这点由Zookeeper保证）。竞选成功者即为新的Leader，竞选失败者则重新在新的Controller Path上注册Watch。因为<a href="http://zookeeper.apache.org/doc/trunk/zookeeperProgrammers.html#ch_zkWatches" target="_blank" rel="noopener">Zookeeper的Watch是一次性的，被fire一次之后即失效</a>，所以需要重新注册。</p>
 <p>Broker成功竞选为新Controller后会触发KafkaController.onControllerFailover方法，并在该方法中完成如下操作：</p>
 <ol>
 <li>读取并增加Controller Epoch。</li>
@@ -638,12 +640,12 @@
 <li>有足够的数据可供返回，即bytesReadable &gt;= fetchRequest.minBytes</li>
 <li>读取数据时发生异常</li>
 </ul>
-<ol>
+<ol start="5">
 <li>若不满足以上4个条件，FetchRequest将不会立即返回，并将该请求封装成DelayedFetch。检查该DeplayedFetch是否满足，若满足则返回请求，否则将该请求加入Watch列表</li>
 </ol>
 <p>　　Leader通过以FetchResponse的形式将消息返回给Follower，FetchResponse结构如下<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/FetchResponse.png" alt="FetchResponse"></p>
 <p>#Replication工具</p>
-<h2 id="Topic-Tool"><a href="#Topic-Tool" class="headerlink" title="Topic Tool"></a>Topic Tool</h2><p>　　<code>$KAFKA_HOME/bin/kafka-topics.sh</code>，该工具可用于创建、删除、修改、查看某个Topic，也可用于列出所有Topic。另外，该工具还可修改以下配置。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">unclean.leader.election.enable</div><div class="line">delete.retention.ms</div><div class="line">segment.jitter.ms</div><div class="line">retention.ms</div><div class="line">flush.ms</div><div class="line">segment.bytes</div><div class="line">flush.messages</div><div class="line">segment.ms</div><div class="line">retention.bytes</div><div class="line">cleanup.policy</div><div class="line">segment.index.bytes</div><div class="line">min.cleanable.dirty.ratio</div><div class="line">max.message.bytes</div><div class="line">file.delete.delay.ms</div><div class="line">min.insync.replicas</div><div class="line">index.interval.bytes</div></pre></td></tr></table></figure></p>
+<h2 id="Topic-Tool"><a href="#Topic-Tool" class="headerlink" title="Topic Tool"></a>Topic Tool</h2><p>　　<code>$KAFKA_HOME/bin/kafka-topics.sh</code>，该工具可用于创建、删除、修改、查看某个Topic，也可用于列出所有Topic。另外，该工具还可修改以下配置。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">unclean.leader.election.enable</span><br><span class="line">delete.retention.ms</span><br><span class="line">segment.jitter.ms</span><br><span class="line">retention.ms</span><br><span class="line">flush.ms</span><br><span class="line">segment.bytes</span><br><span class="line">flush.messages</span><br><span class="line">segment.ms</span><br><span class="line">retention.bytes</span><br><span class="line">cleanup.policy</span><br><span class="line">segment.index.bytes</span><br><span class="line">min.cleanable.dirty.ratio</span><br><span class="line">max.message.bytes</span><br><span class="line">file.delete.delay.ms</span><br><span class="line">min.insync.replicas</span><br><span class="line">index.interval.bytes</span><br></pre></td></tr></table></figure></p>
 <h2 id="Replica-Verification-Tool"><a href="#Replica-Verification-Tool" class="headerlink" title="Replica Verification Tool"></a>Replica Verification Tool</h2><p>　　<code>$KAFKA_HOME/bin/kafka-replica-verification.sh</code>，该工具用来验证所指定的一个或多个Topic下每个Partition对应的所有Replica是否都同步。可通过<code>topic-white-list</code>这一参数指定所需要验证的所有Topic，支持正则表达式。
 　　</p>
 <h2 id="Preferred-Replica-Leader-Election-Tool"><a href="#Preferred-Replica-Leader-Election-Tool" class="headerlink" title="Preferred Replica Leader Election Tool"></a>Preferred Replica Leader Election Tool</h2><p><strong><em>用途</em></strong><br>　　有了Replication机制后，每个Partition可能有多个备份。某个Partition的Replica列表叫作AR（Assigned Replicas），AR中的第一个Replica即为“Preferred Replica”。创建一个新的Topic或者给已有Topic增加Partition时，Kafka保证Preferred Replica被均匀分布到集群中的所有Broker上。理想情况下，Preferred Replica会被选为Leader。以上两点保证了所有Partition的Leader被均匀分布到了集群当中，这一点非常重要，因为所有的读写操作都由Leader完成，若Leader分布过于集中，会造成集群负载不均衡。但是，随着集群的运行，该平衡可能会因为Broker的宕机而被打破，该工具就是用来帮助恢复Leader分配的平衡。<br>　　事实上，每个Topic从失败中恢复过来后，它默认会被设置为Follower角色，除非某个Partition的Replica全部宕机，而当前Broker是该Partition的AR中第一个恢复回来的Replica。因此，某个Partition的Leader（Preferred Replica）宕机并恢复后，它很可能不再是该Partition的Leader，但仍然是Preferred Replica。<br>　　<br><strong><em>原理</em></strong></p>
@@ -680,19 +682,19 @@
 </ul>
 <p>　　下面这个例子将使用该工具将Topic的所有Partition重新分配到Broker 4/5/6/7上，步骤如下：</p>
 <ol>
-<li>使用generate模式，生成reassign plan。指定需要重新分配的Topic （{“topics”:[{“topic”:”topic1”}],”version”:1}），并存入<code>/tmp/topics-to-move.json</code>文件中，然后执行<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$KAFKA_HOME</span>/bin/kafka-reassign-partitions.sh </div><div class="line">	--zookeeper localhost:2181 </div><div class="line">	--topics-to-move-json-file /tmp/topics-to-move.json  </div><div class="line">	--broker-list <span class="string">"4,5,6,7"</span> --generate</div></pre></td></tr></table></figure>
+<li>使用generate模式，生成reassign plan。指定需要重新分配的Topic （{“topics”:[{“topic”:”topic1”}],”version”:1}），并存入<code>/tmp/topics-to-move.json</code>文件中，然后执行<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$KAFKA_HOME</span>/bin/kafka-reassign-partitions.sh </span><br><span class="line">	--zookeeper localhost:2181 </span><br><span class="line">	--topics-to-move-json-file /tmp/topics-to-move.json  </span><br><span class="line">	--broker-list <span class="string">"4,5,6,7"</span> --generate</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<p>　　结果如下图所示<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/reassign_1.png" alt="reassign_1"><br>　　<br>2.　使用execute模式，执行reassign plan<br>　　将上一步生成的reassignment plan存入<code>/tmp/reassign-plan.json</code>文件中，并执行<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">   <span class="variable">$KAFKA_HOME</span>/bin/kafka-reassign-partitions.sh </div><div class="line">--zookeeper localhost:2181     </div><div class="line">--reassignment-json-file /tmp/reassign-plan.json --execute</div></pre></td></tr></table></figure></p>
+<p>　　结果如下图所示<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/reassign_1.png" alt="reassign_1"><br>　　<br>2.　使用execute模式，执行reassign plan<br>　　将上一步生成的reassignment plan存入<code>/tmp/reassign-plan.json</code>文件中，并执行<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">   <span class="variable">$KAFKA_HOME</span>/bin/kafka-reassign-partitions.sh </span><br><span class="line">--zookeeper localhost:2181     </span><br><span class="line">--reassignment-json-file /tmp/reassign-plan.json --execute</span><br></pre></td></tr></table></figure></p>
 <p><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/reassign_2.png" alt="reassign_2"></p>
 <p>　　此时，Zookeeper上<code>/admin/reassign_partitions</code>节点被创建，且其值与<code>/tmp/reassign-plan.json</code>文件的内容一致。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/reassign_3.png" alt="reassign_3"></p>
-<p>3.　使用verify模式，验证reassign是否完成。执行verify命令<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$KAFKA_HOME</span>/bin/kafka-reassign-partitions.sh </div><div class="line">--zookeeper localhost:2181 --verify</div><div class="line">--reassignment-json-file /tmp/reassign-plan.json</div></pre></td></tr></table></figure></p>
+<p>3.　使用verify模式，验证reassign是否完成。执行verify命令<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$KAFKA_HOME</span>/bin/kafka-reassign-partitions.sh </span><br><span class="line">--zookeeper localhost:2181 --verify</span><br><span class="line">--reassignment-json-file /tmp/reassign-plan.json</span><br></pre></td></tr></table></figure></p>
 <p>　　结果如下所示，从图中可看出topic1的所有Partititon都重新分配成功。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/reassign_4.png" alt="reassign_4"></p>
-<p>　　接下来用Topic Tool再次验证。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic topic1</div></pre></td></tr></table></figure></p>
+<p>　　接下来用Topic Tool再次验证。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic topic1</span><br></pre></td></tr></table></figure></p>
 <p>　　结果如下图所示，从图中可看出topic1的所有Partition都被重新分配到Broker 4/5/6/7，且每个Partition的AR与reassign plan一致。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn3/reassign_5.png" alt="reassign_5"></p>
 <p>　　需要说明的是，在使用execute之前，并不一定要使用generate模式自动生成reassign plan，使用generate模式只是为了方便。事实上，某些场景下，generate模式生成的reassign plan并不一定能满足需求，此时用户可以自己设置reassign plan。
 　　</p>
-<h2 id="State-Change-Log-Merge-Tool"><a href="#State-Change-Log-Merge-Tool" class="headerlink" title="State Change Log Merge Tool"></a>State Change Log Merge Tool</h2><p><strong><em>用途</em></strong><br>　　该工具旨在从整个集群的Broker上收集状态改变日志，并生成一个集中的格式化的日志以帮助诊断状态改变相关的故障。每个Broker都会将其收到的状态改变相关的的指令存于名为<code>state-change.log</code>的日志文件中。某些情况下，Partition的Leader Election可能会出现问题，此时我们需要对整个集群的状态改变有个全局的了解从而诊断故障并解决问题。该工具将集群中相关的<code>state-change.log</code>日志按时间顺序合并，同时支持用户输入时间范围和目标Topic及Partition作为过滤条件，最终将格式化的结果输出。<br>　　<br><strong><em>用法</em></strong><br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">bin/kafka-run-class.sh kafka.tools.StateChangeLogMerger</div><div class="line">--logs /opt/kafka_2.11-0.8.2.1/logs/state-change.log</div><div class="line">--topic topic1 --partitions 0,1,2,3,4,5,6,7</div></pre></td></tr></table></figure></p>
+<h2 id="State-Change-Log-Merge-Tool"><a href="#State-Change-Log-Merge-Tool" class="headerlink" title="State Change Log Merge Tool"></a>State Change Log Merge Tool</h2><p><strong><em>用途</em></strong><br>　　该工具旨在从整个集群的Broker上收集状态改变日志，并生成一个集中的格式化的日志以帮助诊断状态改变相关的故障。每个Broker都会将其收到的状态改变相关的的指令存于名为<code>state-change.log</code>的日志文件中。某些情况下，Partition的Leader Election可能会出现问题，此时我们需要对整个集群的状态改变有个全局的了解从而诊断故障并解决问题。该工具将集群中相关的<code>state-change.log</code>日志按时间顺序合并，同时支持用户输入时间范围和目标Topic及Partition作为过滤条件，最终将格式化的结果输出。<br>　　<br><strong><em>用法</em></strong><br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">bin/kafka-run-class.sh kafka.tools.StateChangeLogMerger</span><br><span class="line">--logs /opt/kafka_2.11-0.8.2.1/logs/state-change.log</span><br><span class="line">--topic topic1 --partitions 0,1,2,3,4,5,6,7</span><br></pre></td></tr></table></figure></p>
 <h1 id="Kafka系列文章"><a href="#Kafka系列文章" class="headerlink" title="Kafka系列文章"></a>Kafka系列文章</h1><ul>
 <li><a href="http://www.jasongj.com/2015/03/10/KafkaColumn1/">Kafka设计解析（一）- Kafka背景及架构介绍</a></li>
 <li><a href="http://www.jasongj.com/2015/04/24/KafkaColumn2/">Kafka设计解析（二）- Kafka High Availability （上）</a></li>
@@ -771,9 +773,9 @@
           
             <a href="/tags/big-data/" rel="tag"># big data</a>
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
-          
             <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
             <a href="/tags/Kafka/" rel="tag"># Kafka</a>
           
@@ -905,7 +907,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1036,7 +1038,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -1053,7 +1055,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1380,5 +1382,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

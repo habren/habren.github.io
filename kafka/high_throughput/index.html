@@ -76,17 +76,19 @@
 
 
 <meta name="description" content="本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。">
+<meta name="keywords" content="kafka,大数据,集群,消息系统,郭俊 Jason,kafka 架构,大数据架构,kafka 性能,kafka 吞吐,技术世界,零拷贝">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kafka设计解析（六）- Kafka高性能架构之道">
 <meta property="og:url" content="http://www.jasongj.com/kafka/high_throughput/index.html">
 <meta property="og:site_name" content="技术世界">
 <meta property="og:description" content="本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。">
+<meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-consumer.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-replication.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka_IO.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/BIO.png">
 <meta property="og:image" content="http://www.jasongj.com/img/kafka/KafkaColumn6/NIO.png">
-<meta property="og:updated_time" content="2017-11-12T02:52:40.000Z">
+<meta property="og:updated_time" content="2018-08-31T00:31:35.473Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kafka设计解析（六）- Kafka高性能架构之道">
 <meta name="twitter:description" content="本文从宏观架构层面和微观实现层面分析了Kafka如何实现高性能。包含Kafka如何利用Partition实现并行处理和提供水平扩展能力，如何通过ISR实现可用性和数据一致性的动态平衡，如何使用NIO和Linux的sendfile实现零拷贝以及如何通过顺序读写和数据压缩实现磁盘的高效利用。">
@@ -374,8 +376,8 @@
               
                 <span class="post-meta-item-text">更新于</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2017-11-12T10:52:40+08:00">
-                2017-11-12
+              <time title="更新于" itemprop="dateModified" datetime="2018-08-31T08:31:35+08:00">
+                2018-08-31
               </time>
             
           </span>
@@ -479,7 +481,7 @@
                   <span class="post-meta-item-text">字数</span>
                 
                 <span title="字数">
-                  7,086
+                  7,124
                 </span>
               
 
@@ -559,7 +561,7 @@
 <li>从0.9.0.0版本开始，<code>replica.lag.max.messages</code>被移除，故Leader不再考虑Follower落后的消息条数。另外，Leader不仅会判断Follower是否在<code>replica.lag.time.max.ms</code>时间内向其发送Fetch请求，同时还会考虑Follower是否在该时间内与之保持同步。</li>
 <li>0.10.* 版本的策略与0.9.*版一致</li>
 </ul>
-<p>对于0.8.*版本的<code>replica.lag.max.messages</code>参数，很多读者曾留言提问，既然只有ISR中的所有Replica复制完后的消息才被认为Commit，那为何会出现Follower与Leader差距过大的情况。原因在于，Leader并不需要等到前一条消息被Commit才接收后一条消息。事实上，Leader可以按顺序接收大量消息，最新的一条消息的Offset被记为High Wartermark。而只有被ISR中所有Follower都复制过去的消息才会被Commit，Consumer只能消费被Commit的消息。由于Follower的复制是严格按顺序的，所以被Commit的消息之前的消息肯定也已经被Commit过。换句话说，High Watermark标记的是Leader所保存的最新消息的offset，而Commit Offset标记的是最新的可被消费的（已同步到ISR中的Follower）消息。而Leader对数据的接收与Follower对数据的复制是异步进行的，因此会出现Commit Offset与High Watermark存在一定差距的情况。0.8.*版本中<code>replica.lag.max.messages</code>限定了Leader允许的该差距的最大值。</p>
+<p>对于0.8.*版本的<code>replica.lag.max.messages</code>参数，很多读者曾留言提问，既然只有ISR中的所有Replica复制完后的消息才被认为Commit，那为何会出现Follower与Leader差距过大的情况。原因在于，Leader并不需要等到前一条消息被Commit才接收后一条消息。事实上，Leader可以按顺序接收大量消息，最新的一条消息的Offset被记为LEO（Log end offset）。而只有被ISR中所有Follower都复制过去的消息才会被Commit，Consumer只能消费被Commit的消息，最新被Commit的Offset被记为High watermark。换句话说，LEO 标记的是Leader所保存的最新消息的offset，而High watermark标记的是最新的可被消费的（已同步到ISR中的Follower）消息。而Leader对数据的接收与Follower对数据的复制是异步进行的，因此会出现Hight watermark与LEO存在一定差距的情况。0.8.*版本中<code>replica.lag.max.messages</code>限定了Leader允许的该差距的最大值。</p>
 <p>Kafka基于ISR的数据复制方案原理如下图所示。<br><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/kafka-replication.png" alt="Kafka Replication"></p>
 <p>如上图所示，在第一步中，Leader A总共收到3条消息，故其high watermark为3，但由于ISR中的Follower只同步了第1条消息（m1），故只有m1被Commit，也即只有m1可被Consumer消费。此时Follower B与Leader A的差距是1，而Follower C与Leader A的差距是2，均未超过默认的<code>replica.lag.max.messages</code>，故得以保留在ISR中。在第二步中，由于旧的Leader A宕机，新的Leader B在<code>replica.lag.time.max.ms</code>时间内未收到来自A的Fetch请求，故将A从ISR中移除，此时ISR={B，C}。同时，由于此时新的Leader B中只有2条消息，并未包含m3（m3从未被任何Leader所Commit），所以m3无法被Consumer消费。第四步中，Follower A恢复正常，它先将宕机前未Commit的所有消息全部删除，然后从最后Commit过的消息的下一条消息开始追赶新的Leader B，直到它“赶上”新的Leader，才被重新加入新的ISR中。</p>
 <h3 id="使用ISR方案的原因"><a href="#使用ISR方案的原因" class="headerlink" title="使用ISR方案的原因"></a>使用ISR方案的原因</h3><ul>
@@ -574,7 +576,7 @@
 <h1 id="具体实现层面"><a href="#具体实现层面" class="headerlink" title="具体实现层面"></a>具体实现层面</h1><h2 id="高效使用磁盘"><a href="#高效使用磁盘" class="headerlink" title="高效使用磁盘"></a>高效使用磁盘</h2><h3 id="顺序写磁盘"><a href="#顺序写磁盘" class="headerlink" title="顺序写磁盘"></a>顺序写磁盘</h3><p>根据《<a href="http://deliveryimages.acm.org/10.1145/1570000/1563874/jacobs3.jpg" title="一些场景下顺序写磁盘快于随机写内存" target="_blank" rel="external nofollow">一些场景下顺序写磁盘快于随机写内存</a>》所述，将写磁盘的过程变为顺序写，可极大提高对磁盘的利用率。</p>
 <p>Kafka的整个设计中，Partition相当于一个非常长的数组，而Broker接收到的所有消息顺序写入这个大数组中。同时Consumer通过Offset顺序消费这些数据，并且不删除已经消费的数据，从而避免了随机写磁盘的过程。</p>
 <p>由于磁盘有限，不可能保存所有数据，实际上作为消息系统Kafka也没必要保存所有数据，需要删除旧的数据。而这个删除过程，并非通过使用“读-写”模式去修改文件，而是将Partition分为多个Segment，每个Segment对应一个物理文件，通过删除整个文件的方式去删除Partition内的数据。这种方式清除旧数据的方式，也避免了对文件的随机写操作。</p>
-<p>通过如下代码可知，Kafka删除Segment的方式，是直接删除Segment对应的整个log文件和整个index文件而非删除文件中的部分内容。<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * Delete this log segment from the filesystem.</div><div class="line"> *</div><div class="line"> * @throws KafkaStorageException if the delete fails.</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span></span>() &#123;</div><div class="line">  <span class="keyword">val</span> deletedLog = log.delete()</div><div class="line">  <span class="keyword">val</span> deletedIndex = index.delete()</div><div class="line">  <span class="keyword">val</span> deletedTimeIndex = timeIndex.delete()</div><div class="line">  <span class="keyword">if</span>(!deletedLog &amp;&amp; log.file.exists)</div><div class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of log "</span> + log.file.getName + <span class="string">" failed."</span>)</div><div class="line">  <span class="keyword">if</span>(!deletedIndex &amp;&amp; index.file.exists)</div><div class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of index "</span> + index.file.getName + <span class="string">" failed."</span>)</div><div class="line">  <span class="keyword">if</span>(!deletedTimeIndex &amp;&amp; timeIndex.file.exists)</div><div class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of time index "</span> + timeIndex.file.getName + <span class="string">" failed."</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>通过如下代码可知，Kafka删除Segment的方式，是直接删除Segment对应的整个log文件和整个index文件而非删除文件中的部分内容。<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Delete this log segment from the filesystem.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * @throws KafkaStorageException if the delete fails.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span></span>() &#123;</span><br><span class="line">  <span class="keyword">val</span> deletedLog = log.delete()</span><br><span class="line">  <span class="keyword">val</span> deletedIndex = index.delete()</span><br><span class="line">  <span class="keyword">val</span> deletedTimeIndex = timeIndex.delete()</span><br><span class="line">  <span class="keyword">if</span>(!deletedLog &amp;&amp; log.file.exists)</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of log "</span> + log.file.getName + <span class="string">" failed."</span>)</span><br><span class="line">  <span class="keyword">if</span>(!deletedIndex &amp;&amp; index.file.exists)</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of index "</span> + index.file.getName + <span class="string">" failed."</span>)</span><br><span class="line">  <span class="keyword">if</span>(!deletedTimeIndex &amp;&amp; timeIndex.file.exists)</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">KafkaStorageException</span>(<span class="string">"Delete of time index "</span> + timeIndex.file.getName + <span class="string">" failed."</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <h3 id="充分利用Page-Cache"><a href="#充分利用Page-Cache" class="headerlink" title="充分利用Page Cache"></a>充分利用Page Cache</h3><p>使用Page Cache的好处如下</p>
 <ul>
 <li>I/O Scheduler会将连续的小块写组装成大块的物理写从而提高性能</li>
@@ -589,13 +591,13 @@
 <p>从上图可以看到，该Broker每秒通过网络从Producer接收约35MB数据，虽然有Follower从该Broker Fetch数据，但是该Broker基本无读磁盘。这是因为该Broker直接从Page Cache中将数据取出返回给了Follower。</p>
 <h3 id="支持多Disk-Drive"><a href="#支持多Disk-Drive" class="headerlink" title="支持多Disk Drive"></a>支持多Disk Drive</h3><p>Broker的<code>log.dirs</code>配置项，允许配置多个文件夹。如果机器上有多个Disk Drive，可将不同的Disk挂载到不同的目录，然后将这些目录都配置到<code>log.dirs</code>里。Kafka会尽可能将不同的Partition分配到不同的目录，也即不同的Disk上，从而充分利用了多Disk的优势。</p>
 <h2 id="零拷贝"><a href="#零拷贝" class="headerlink" title="零拷贝"></a>零拷贝</h2><p>Kafka中存在大量的网络数据持久化到磁盘（Producer到Broker）和磁盘文件通过网络发送（Broker到Consumer）的过程。这一过程的性能直接影响Kafka的整体吞吐量。  </p>
-<h3 id="传统模式下的四次拷贝与四次上下文切换"><a href="#传统模式下的四次拷贝与四次上下文切换" class="headerlink" title="传统模式下的四次拷贝与四次上下文切换"></a>传统模式下的四次拷贝与四次上下文切换</h3><p>以将磁盘文件通过网络发送为例。传统模式下，一般使用如下伪代码所示的方法先将文件数据读入内存，然后通过Socket将内存中的数据发送出去。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">buffer = File.read</div><div class="line">Socket.send(buffer)</div></pre></td></tr></table></figure></p>
+<h3 id="传统模式下的四次拷贝与四次上下文切换"><a href="#传统模式下的四次拷贝与四次上下文切换" class="headerlink" title="传统模式下的四次拷贝与四次上下文切换"></a>传统模式下的四次拷贝与四次上下文切换</h3><p>以将磁盘文件通过网络发送为例。传统模式下，一般使用如下伪代码所示的方法先将文件数据读入内存，然后通过Socket将内存中的数据发送出去。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">buffer = File.read</span><br><span class="line">Socket.send(buffer)</span><br></pre></td></tr></table></figure></p>
 <p>这一过程实际上发生了四次数据拷贝。首先通过系统调用将文件数据读入到内核态Buffer（DMA拷贝），然后应用程序将内存态Buffer数据读入到用户态Buffer（CPU拷贝），接着用户程序通过Socket发送数据时将用户态Buffer数据拷贝到内核态Buffer（CPU拷贝），最后通过DMA拷贝将数据拷贝到NIC Buffer。同时，还伴随着四次上下文切换，如下图所示。  </p>
 <p><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/BIO.png" alt="BIO 四次拷贝 四次上下文切换"> </p>
 <h3 id="sendfile和transferTo实现零拷贝"><a href="#sendfile和transferTo实现零拷贝" class="headerlink" title="sendfile和transferTo实现零拷贝"></a>sendfile和transferTo实现零拷贝</h3><p>Linux 2.4+内核通过<code>sendfile</code>系统调用，提供了零拷贝。数据通过DMA拷贝到内核态Buffer后，直接通过DMA拷贝到NIC Buffer，无需CPU拷贝。这也是零拷贝这一说法的来源。除了减少数据拷贝外，因为整个读文件-网络发送由一个<code>sendfile</code>调用完成，整个过程只有两次上下文切换，因此大大提高了性能。零拷贝过程如下图所示。</p>
 <p><img src="http://www.jasongj.com/img/kafka/KafkaColumn6/NIO.png" alt="BIO 零拷贝 两次上下文切换"> </p>
 <p>从具体实现来看，Kafka的数据传输通过TransportLayer来完成，其子类<code>PlaintextTransportLayer</code>通过<a href="http://www.jasongj.com/java/nio_reactor/">Java NIO</a>的FileChannel的<code>transferTo</code>和<code>transferFrom</code>方法实现零拷贝，如下所示。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="meta">@Override</span></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">transferFrom</span><span class="params">(FileChannel fileChannel, <span class="keyword">long</span> position, <span class="keyword">long</span> count)</span> <span class="keyword">throws</span> IOException </span>&#123;</div><div class="line">    <span class="keyword">return</span> fileChannel.transferTo(position, count, socketChannel);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">transferFrom</span><span class="params">(FileChannel fileChannel, <span class="keyword">long</span> position, <span class="keyword">long</span> count)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> fileChannel.transferTo(position, count, socketChannel);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p><strong>注：</strong> <code>transferTo</code>和<code>transferFrom</code>并不保证一定能使用零拷贝。实际上是否能使用零拷贝与操作系统相关，如果操作系统提供<code>sendfile</code>这样的零拷贝系统调用，则这两个方法会通过这样的系统调用充分利用零拷贝的优势，否则并不能通过这两个方法本身实现零拷贝。</p>
 <h2 id="减少网络开销"><a href="#减少网络开销" class="headerlink" title="减少网络开销"></a>减少网络开销</h2><h3 id="批处理"><a href="#批处理" class="headerlink" title="批处理"></a>批处理</h3><p>批处理是一种常用的用于提高I/O性能的方式。对Kafka而言，批处理既减少了网络传输的Overhead，又提高了写磁盘的效率。</p>
 <p>Kafka 0.8.1及以前的Producer区分同步Producer和异步Producer。同步Producer的send方法主要分两种形式。一种是接受一个KeyedMessage作为参数，一次发送一条消息。另一种是接受一批KeyedMessage作为参数，一次性发送多条消息。而对于异步发送而言，无论是使用哪个send方法，实现上都不会立即将消息发送给Broker，而是先存到内部的队列中，直到消息条数达到阈值或者达到指定的Timeout才真正的将消息发送出去，从而实现了消息的批量发送。</p>
@@ -684,9 +686,9 @@
           
             <a href="/tags/big-data/" rel="tag"># big data</a>
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
-          
             <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
             <a href="/tags/Kafka/" rel="tag"># Kafka</a>
           
@@ -818,7 +820,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">47</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -949,7 +951,7 @@
         <div class="copyright" >
   
   &copy;  2015 - 
-  <span itemprop="copyrightYear">2017</span>
+  <span itemprop="copyrightYear">2018</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -966,7 +968,7 @@
   
   
     <span class="post-count">
-      &nbsp; | &nbsp; 总字数 &nbsp; 231.2k
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
     </span>
   
 
@@ -1293,5 +1295,35 @@ translateInitilization();
   
   -->
 
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 </body>
 </html>

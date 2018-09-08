@@ -1,0 +1,1299 @@
+ <!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta http-equiv="content-language" content="zh-cn" />
+<meta http-equiv="Window-target"content="_top">
+
+
+
+  <meta name="google-site-verification" content="_lpnaoq9f4n68-jMrHuEIsB1kJO_6WMxvONibOMBdxM" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="author" content="郭俊 Jason" />
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="committask,commitjob,spark 一致性,mapreduce.fileoutputcommitter.algorithm.version,spark,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界" />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="技术世界" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/sun.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本文结合实例介绍了 Spark 保证数据一致性的方法，OutputCommitter原理，以及 fileoutputcommitter.algorithm v1 与 v2 的原理与区别。">
+<meta name="keywords" content="committask,commitjob,spark 一致性,mapreduce.fileoutputcommitter.algorithm.version,spark,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spark OutputCommitter 保证数据一致性">
+<meta property="og:url" content="http://www.jasongj.com/spark/committer/index.html">
+<meta property="og:site_name" content="技术世界">
+<meta property="og:description" content="本文结合实例介绍了 Spark 保证数据一致性的方法，OutputCommitter原理，以及 fileoutputcommitter.algorithm v1 与 v2 的原理与区别。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/check_output_path.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/setup_job.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/setup_task.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/create_task_output_file.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/need_commit_task.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/need_commit_task_detail.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/coordinator_handle_request.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/commit_task_v1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/commit_task_v2.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/commit_job_v1.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/commit_job_v2.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/cleanup_job.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/recover_task.png">
+<meta property="og:image" content="http://www.jasongj.com/img/spark/spark5_committer/abort_task.png">
+<meta property="og:updated_time" content="2018-09-24T23:02:13.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spark OutputCommitter 保证数据一致性">
+<meta name="twitter:description" content="本文结合实例介绍了 Spark 保证数据一致性的方法，OutputCommitter原理，以及 fileoutputcommitter.algorithm v1 与 v2 的原理与区别。">
+<meta name="twitter:image" content="http://www.jasongj.com/img/spark/spark5_committer/check_output_path.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.jasongj.com/spark/committer/"/>
+
+
+
+
+
+  <title>
+  
+    Spark OutputCommitter 保证数据一致性 commitTask commitJob mapreduce.fileoutputcommitter.algorithm.version | 技术世界 | committask,commitjob,spark 一致性,mapreduce.fileoutputcommitter.algorithm.version,spark,大数据,集群,消息系统,郭俊 Jason,spark 优化,大数据架构,技术世界
+  
+</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-58959834-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<!--
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+-->
+
+  <script type="text/javascript" async src = "//hm.baidu.com/hm.js?7dfdf667ba885e2b04d1c1cc561490f0">
+  </script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术世界</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">分享交流大数据领域技术，包括但不限于Storm、Spark、Hadoop等流行分布式计算系统，Kafka、MetaQ等分布式消息系统，MongoDB、Cassandra等NoSQL，PostgreSQL、MySQL等RDBMS以及其它前沿技术</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-kafka">
+          <a href="/tags/Kafka/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-list"></i> <br />
+            
+            Kafka
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-spark">
+          <a href="/tags/Spark/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-life-bouy"></i> <br />
+            
+            Spark
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-big_data">
+          <a href="/tags/big-data/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            大数据
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-machine_learning">
+          <a href="/tags/machine-learning/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-cloud"></i> <br />
+            
+            机器学习
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sql">
+          <a href="/tags/SQL/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-database"></i> <br />
+            
+            SQL
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-java">
+          <a href="/tags/Java/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-fire"></i> <br />
+            
+            Java
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-design_pattern">
+          <a href="/tags/Design-Pattern/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-diamond"></i> <br />
+            
+            设计模式
+          </a>
+        </li>
+      
+<!--
+      
+-->
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.jasongj.com/spark/committer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="郭俊 Jason">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="//www.jasongj.com/img/WeChat_QR.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Spark OutputCommitter 保证数据一致性
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-09-25T07:02:13+08:00">
+                2018-09-25
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-09-25T07:02:13+08:00">
+                2018-09-25
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big data</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/big-data/大数据/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/spark/committer/#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">评论次数 </span>
+                  <span identifier= "/spark/committer/" id="disqus-page-comment-count" class="post-comments-count disqus-comment-count"
+                         itemprop="commentCount" target="_blank">0</span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/spark/committer/" class="leancloud_visitors" data-flag-title="Spark OutputCommitter 保证数据一致性">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数</span>
+                
+                <span title="字数">
+                  2,867
+                </span>
+              
+
+              
+
+              
+          
+
+          
+              <div class="post-description">
+                  本文结合实例介绍了 Spark 保证数据一致性的方法，OutputCommitter原理，以及 fileoutputcommitter.algorithm v1 与 v2 的原理与区别。
+              </div>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>原创文章，转载请务必将下面这段话置于文章开头处。<br>本文转发自<a href="http://www.jasongj.com"><strong>技术世界</strong></a>，<a href="http://www.jasongj.com/spark/committer">原文链接</a>　<a href="http://www.jasongj.com/spark/committer">http://www.jasongj.com/spark/committer/</a></p>
+</blockquote>
+<blockquote>
+<p>本文所述内容均基于 2018年9月17日 Spark 最新 Release 2.3.1 版本。后续将持续更新</p>
+</blockquote>
+<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>Spark 输出数据到 HDFS 时，需要解决如下问题：</p>
+<ul>
+<li>由于多个 Task 同时写数据到 HDFS，如何保证要么所有 Task 写的所有文件要么同时对外可见，要么同时对外不可见，即保证数据一致性</li>
+<li>同一 Task 可能因为 Speculation 而存在两个完全相同的 Task 实例写相同的数据到 HDFS中，如何保证只有一个 commit 成功</li>
+<li>对于大 Job（如具有几万甚至几十万 Task），如何高效管理所有文件</li>
+</ul>
+<h1 id="commit-原理"><a href="#commit-原理" class="headerlink" title="commit 原理"></a>commit 原理</h1><p>本文通过 Local mode 执行如下 Spark 程序详解 commit 原理<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sparkContext.textFile(<span class="string">"/json/input.zstd"</span>)</span><br><span class="line">  .map(_.split(<span class="string">","</span>))</span><br><span class="line">  .saveAsTextFile(<span class="string">"/jason/test/tmp"</span>)</span><br></pre></td></tr></table></figure></p>
+<p>在详述 commit 原理前，需要说明几个述语</p>
+<ul>
+<li>Task，即某个 Application 的某个 Job 内的某个 Stage 的一个 Task</li>
+<li>TaskAttempt，Task 每次执行都视为一个 TaskAttempt。对于同一个 Task，可能同时存在多个 TaskAttemp</li>
+<li>Application Attempt，即 Application 的一次执行</li>
+</ul>
+<p>在本文中，会使用如下缩写</p>
+<ul>
+<li>${output.dir.root} 即输出目录根路径</li>
+<li>${appAttempt} 即 Application Attempt ID，为整型，且从 0 开始</li>
+<li>${taskAttemp} 即 Task Attetmp ID，为整型，从 0 开始</li>
+</ul>
+<h2 id="检查-Job-输出目录"><a href="#检查-Job-输出目录" class="headerlink" title="检查 Job 输出目录"></a>检查 Job 输出目录</h2><p>在启动 Job 之前，Driver 首先通过 FileOutputFormat 的 checkOutputSpecs 方法检查输出目录是否已经存在。若已存在，则直接抛出 <em>FileAlreadyExistsException</em><br><img src="http://www.jasongj.com/img/spark/spark5_committer/check_output_path.png" alt="Check output path"></p>
+<h2 id="Driver执行setupJob"><a href="#Driver执行setupJob" class="headerlink" title="Driver执行setupJob"></a>Driver执行setupJob</h2><p>Job 开启前，由 Driver（本例使用 local mode，因此由 main 线程执行）调用 FileOuputCommitter.setupJob 设创建 Job 目录，即 ${output.dir.root}/_temporary/${appAttempt}<br><img src="http://www.jasongj.com/img/spark/spark5_committer/setup_job.png" alt="Setup job"></p>
+<h2 id="Task执行setupTask"><a href="#Task执行setupTask" class="headerlink" title="Task执行setupTask"></a>Task执行setupTask</h2><p>由各 Task 执行 FileOutputCommitter.setupTask 方法（本例使用 local mode，因此由 task 系统执行）。该方法不做任何事情，因为 Task 临时目录由 Task 按需创建。<br><img width="80%" style="margin: 0 auto;" src="http://www.jasongj.com/img/spark/spark5_committer/setup_task.png" alt="Setup task"></p>
+<h2 id="按需创建-Task-目录"><a href="#按需创建-Task-目录" class="headerlink" title="按需创建 Task 目录"></a>按需创建 Task 目录</h2><p>本例中，Task 写数据需要通过 <em>TextOutputFormat</em> 的 <em>getRecordWriter</em> 方法创建 <em>LineRecordWriter</em>。而创建前需要通过 <em>FileOutputFormat.getTaskOutputPath</em>设置 Task 输出路径，即 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}/${fileName}</code>。该 Task 所有数据均写在该目录下的文件内<br><img src="http://www.jasongj.com/img/spark/spark5_committer/create_task_output_file.png" alt="Create task output file"></p>
+<h2 id="检查是否需要-commit"><a href="#检查是否需要-commit" class="headerlink" title="检查是否需要 commit"></a>检查是否需要 commit</h2><p>Task 执行数据写完后，通过 FileOutputCommitter.needsTaskCommit 方法检查是否需要 commit 它写在 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code> 下的数据。</p>
+<p>检查依据是 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code> 目录是否存在<br><img src="http://www.jasongj.com/img/spark/spark5_committer/need_commit_task.png" alt="Need commmit task"></p>
+<p>如果需要 commit，并且开启了 Output commit coordination，还需要通过 RPC 由 Driver 侧的 OutputCommitCoordinator 判断该 Task Attempt 是否可以 commit<br><img src="http://www.jasongj.com/img/spark/spark5_committer/need_commit_task_detail.png" alt="Need commmit task detail"></p>
+<p>之所以需要由 Driver 侧的 CommitCoordinator 判断是否可以 commit，是因为可能由于 speculation 或者其它原因（如之前的 TaskAttemp 未被 Kill 成功）存在同一 Task 的多个 Attemp 同时写数据且都申请 commit 的情况。</p>
+<h2 id="CommitCoordinator"><a href="#CommitCoordinator" class="headerlink" title="CommitCoordinator"></a>CommitCoordinator</h2><p>当申请 commitTask 的 TaskAttempt 为失败的 Attempt，则直接拒绝</p>
+<p>若该 TaskAttempt 成功，并且 CommitCoordinator 未请允许过该 Task 的其它 Attempt commit，则允许该 TaskAttempt</p>
+<p>若 CommitCoordinator 之前已允许过该 TaskAttempt commit，则继续同意该 TaskAttempt commit，即 CommitCoordinator 对该申请的处理是幂等的。</p>
+<p>若该 TaskAttempt 成功，且 CommitCoordinator 之前已允许该 Task 的其它 Attempt，则直接拒绝当前 TaskAttempt 的 commit 申请<br><img src="http://www.jasongj.com/img/spark/spark5_committer/coordinator_handle_request.png" alt="Coordinator handle request"></p>
+<p>OutputCommitCoordinator 为了实现上述功能，为每个 ActiveStage 维护一个如下 StageState<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">case</span> <span class="class"><span class="keyword">class</span> <span class="title">StageState</span>(<span class="params">numPartitions: <span class="type">Int</span></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">val</span> authorizedCommitters = <span class="type">Array</span>.fill[<span class="type">TaskAttemptNumber</span>](numPartitions)(<span class="type">NO_AUTHORIZED_COMMITTER</span>)</span><br><span class="line">  <span class="keyword">val</span> failures = mutable.<span class="type">Map</span>[<span class="type">PartitionId</span>, mutable.<span class="type">Set</span>[<span class="type">TaskAttemptNumber</span>]]()</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>该数据结构中，保存了每个 Task 被允许 commit 的 TaskAttempt。默认值均为 <em>NO_AUTHORIZED_COMMITTER</em></p>
+<p>同时，保存了每个 Task 的所有失败的 Attempt</p>
+<h2 id="commitTask"><a href="#commitTask" class="headerlink" title="commitTask"></a>commitTask</h2><p>当 TaskAttempt 被允许 commit后，Task (本例由于使用 local model，因此由 task 线程执行)会通过如下方式 commitTask。</p>
+<p>当 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 1 (默认值)时，Task 将 taskAttemptPath 即 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code> 重命令为 committedTaskPath 即 <code>${output.dir.root}/_temporary/${appAttempt}/${taskAttempt}</code><br><img src="http://www.jasongj.com/img/spark/spark5_committer/commit_task_v1.png" alt="Commit task v1"></p>
+<p>若 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 2，直接将taskAttemptPath 即 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code> 内的所有文件移动到 outputPath 即 <code>${output.dir.root}/</code><br><img src="http://www.jasongj.com/img/spark/spark5_committer/commit_task_v2.png" alt="Commit task v2"></p>
+<h2 id="commitJob"><a href="#commitJob" class="headerlink" title="commitJob"></a>commitJob</h2><p>当所有 Task 都执行成功后，由 Driver （本例由于使用 local model，故由 main 线程执行）执行 <code>FileOutputCommitter.commitJob</code></p>
+<p>若 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 1，则由 Driver 单线程遍历所有 committedTaskPath 即 <code>${output.dir.root}/_temporary/${appAttempt}/${taskAttempt}</code>，并将其下所有文件移动到 finalOutput 即 <code>${output.dir.root}</code> 下<br><img src="http://www.jasongj.com/img/spark/spark5_committer/commit_job_v1.png" alt="Commit job v1"></p>
+<p>若 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 2，则无须移动任何文件。因为所有 Task 的输出文件已在 commitTask 内被移动到 finalOutput 即 <code>${output.dir.root}</code> 内<br><img src="http://www.jasongj.com/img/spark/spark5_committer/commit_job_v2.png" alt="Commit job v2"></p>
+<p>所有 commit 过的 Task 输出文件移动到 finalOutput 即 <code>${output.dir.root}</code> 后，Driver 通过 cleanJob 删除 <code>${output.dir.root}/_temporary/</code> 下所有内容<br><img width="70%" style="margin: 0 auto;" src="http://www.jasongj.com/img/spark/spark5_committer/cleanup_job.png" alt="Cleanup job"></p>
+<h2 id="Task-恢复"><a href="#Task-恢复" class="headerlink" title="Task 恢复"></a>Task 恢复</h2><p>上文所述的 commitTask 与 commitJob 机制，保证了几一次 Application Attemp 中不同 Task 的不同 Attemp 在 commit 时的数据一致性</p>
+<p>而当整个 Application retry 时，在之前的 Application Attemp 中已经成功已经 commit 的 Task 无须重新执行，其数据可直接恢复</p>
+<p>恢复 Task 时，先获取上一次的 Application Attempt，以及对应的 committedTaskPath，即 <code>${output.dir.root}/_temporary/${preAppAttempt}/${taskAttempt}</code></p>
+<p>若 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 1，并且 preCommittedTaskPath 存在（说明在之前的 Application Attempt 中该 Task 已被 commit 过），则直接将 preCommittedTaskPath 重命名为 committedTaskPath</p>
+<p>若 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 2，无须恢复任何数据，因为在之前 Application Attempt 中 commit 过的 Task 的数据已经在 commitTask 中被移动到 <code>${output.dir.root}</code> 中<br><img src="http://www.jasongj.com/img/spark/spark5_committer/recover_task.png" alt="Recover task"></p>
+<h2 id="中止-Task"><a href="#中止-Task" class="headerlink" title="中止 Task"></a>中止 Task</h2><p>中止 Task 时，由 Task 调用  <code>FileOutputCommitter.abortTask</code> 方法删除 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code><br><img src="http://www.jasongj.com/img/spark/spark5_committer/abort_task.png" alt="Abort task"></p>
+<h2 id="中止-Job"><a href="#中止-Job" class="headerlink" title="中止 Job"></a>中止 Job</h2><p>中止 Job 由 Driver 调用 <code>FileOutputCommitter.abortJob</code> 方法完成。该方法通过 <code>FileOutputCommitter.cleanupJob</code> 方法删除 <code>${output.dir.root}/_temporary</code></p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><h2 id="V1-vs-V2-committer-过程"><a href="#V1-vs-V2-committer-过程" class="headerlink" title="V1 vs. V2 committer 过程"></a>V1 vs. V2 committer 过程</h2><p>V1 committer（即 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 1），commit 过程如下</p>
+<ul>
+<li>Task 线程将 TaskAttempt 数据写入 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code></li>
+<li>commitTask 由 Task 线程将 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code> 移动到 <code>${output.dir.root}/_temporary/${appAttempt}/${taskAttempt}</code></li>
+<li>commitJob 由 Driver 单线程依次将所有 <code>${output.dir.root}/_temporary/${appAttempt}/${taskAttempt}</code> 移动到 <code>${output.dir.root}</code>，然后创建 <code>_SUCCESS</code> 标记文件</li>
+<li>recoverTask 由 Task 线程将 <code>${output.dir.root}/_temporary/${preAppAttempt}/${preTaskAttempt}</code> 移动到 <code>${output.dir.root}/_temporary/${appAttempt}/${taskAttempt}</code></li>
+</ul>
+<p>V2 committer（即 <code>mapreduce.fileoutputcommitter.algorithm.version</code> 的值为 2），commit 过程如下</p>
+<ul>
+<li>Task 线程将 TaskAttempt 数据写入 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code></li>
+<li>commitTask 由 Task 线程将 <code>${output.dir.root}/_temporary/${appAttempt}/_temporary/${taskAttempt}</code> 移动到 <code>${output.dir.root}</code></li>
+<li>commitJob 创建 <code>_SUCCESS</code> 标记文件</li>
+<li>recoverTask 无需任何操作</li>
+</ul>
+<h2 id="V1-vs-V2-committer-性能对比"><a href="#V1-vs-V2-committer-性能对比" class="headerlink" title="V1 vs. V2 committer 性能对比"></a>V1 vs. V2 committer 性能对比</h2><p>V1 在 Job 执行结束后，在 Driver 端通过 commitJob 方法，单线程串行将所有 Task 的输出文件移动到输出根目录。移动以文件为单位，当 Task 个数较多（大 Job，或者小文件引起的大量小 Task），Name Node RPC 较慢时，该过程耗时较久。在实践中，可能因此发生所有 Task 均执行结束，但 Job 不结束的问题。甚至 commitJob 耗时比 所有 Task 执行时间还要长</p>
+<p>而 V2 在 Task 结束后，由 Task 在 commitTask 方法内，将自己的数据文件移动到输出根目录。一方面，Task 结束时即移动文件，不需等待 Job 结束才移动文件，即文件移动更早发起，也更早结束。另一方面，不同 Task 间并行移动文件，极大缩短了整个 Job 内所有 Task 的文件移动耗时</p>
+<h2 id="V1-vs-V2-committer-一致性对比"><a href="#V1-vs-V2-committer-一致性对比" class="headerlink" title="V1 vs. V2 committer 一致性对比"></a>V1 vs. V2 committer 一致性对比</h2><p>V1 只有 Job 结束，才会将数据文件移动到输出根目录，才会对外可见。在此之前，所有文件均在 <code>${output.dir.root}/_temporary/${appAttempt}</code> 及其子文件内，对外不可见。</p>
+<p>当 commitJob 过程耗时较短时，其失败的可能性较小，可认为 V1 的 commit 过程是两阶段提交，要么所有 Task 都 commit 成功，要么都失败。</p>
+<p>而由于上文提到的问题， commitJob 过程可能耗时较久，如果在此过程中，Driver 失败，则可能发生部分 Task 数据被移动到 ${output.dir.root} 对外可见，部分 Task 的数据未及时移动，对外不可见的问题。此时发生了数据不一致性的问题</p>
+<p>V2 当 Task 结束时，立即将数据移动到 ${output.dir.root}，立即对外可见。如果 Application 执行过程中失败了，已 commit 的 Task 数据仍然对外可见，而失败的 Task 数据或未被 commit 的 Task 数据对外不可见。也即 V2 更易发生数据一致性问题</p>
+
+      <script>
+        window.disqusProxy={
+          shortname: 'jasongj',
+          username: 'jasongj',
+          server: 'comments.jasongj.com',
+          port: 3724,
+          adminAvatar: '/avatars/admin-avatar.jpg',
+          identifier: 'spark/committer/',
+        };
+        window.disqus_config = function () {
+          this.page.url = window.location.href;
+          this.page.identifier = window.disqusProxy.identifier;
+        };
+      </script>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="//cdn.jasongj.com/img/WeChat_QR.png" alt="郭俊 Jason wechat" style="width: 200px; max-width: 100%;"/>
+    <div>欢迎关注作者微信公众号【大数据架构】</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的赞赏将支持作者继续原创分享</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}" style="cursor: pointer; border: 0; outline: 0; border-radius: 100%; padding: 0; margin: 0; letter-spacing: normal; text-transform: none; text-indent: 0px; text-shadow: none">
+      <span onmouseover="this.style.color='rgb(236,96,0)';this.style.background='rgb(204,204,204)'" onMouseOut="this.style.color='#fff';this.style.background='rgb(236,96,0)'" style="display: inline-block; width: 70px; height: 70px; border-radius: 100%; line-height: 81px; color: #fff; font: 400 35px/75px 'microsofty'; background: rgb(236,96,0)">赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/img/wechat.png" alt=" WeChat Pay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/img/alipay.png" alt=" Alipay" style="width: 200px; max-width: 100%; display: inline-block"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big data</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/spark/cbo/" rel="next" title="Spark SQL 性能优化再进一步 CBO 基于代价的优化">
+                <i class="fa fa-chevron-left"></i> Spark SQL 性能优化再进一步 CBO 基于代价的优化
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      
+      <link rel="stylesheet" href="/css/iDisqus.min.css" />
+      <script src="/js/src/iDisqus.min.js"></script>
+
+      <input type="checkbox" hidden="true" id="comment-toggle" disabled />
+      <div id="comment"></div>
+        
+        <!--
+        <p>本页共有 <span data-disqus-url="/spark/committer/"></span> 条评论</p>
+        -->
+
+        <!--
+        <ul id="popular-posts"></ul>
+        -->
+        <script>
+            var disq = new iDisqus('comment', {
+                forum: 'jasongj',
+                api: 'http://comments.jasongj.com/disqus',
+                site: 'http://www.jasongj.com',
+                url: decodeURI('/spark/committer/'),
+                identifier: decodeURI('/spark/committer/'),
+                title: 'Spark OutputCommitter 保证数据一致性',
+                slug: 'spark/committer/',
+                mode: 3,
+                trust: 'www.jasongj.com',
+                timeout: 3000,
+                popular: document.getElementById('popular-posts'),
+                init: true,
+            });
+            disq.popular();
+            disq.count();
+        </script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="//www.jasongj.com/img/WeChat_QR.png"
+               alt="郭俊 Jason" height="160px" width="160px"/>
+          <p class="site-author-name" itemprop="name">郭俊 Jason</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/">
+                <span class="site-state-item-count">47</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">23</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+          <div class="feed-link motion-element">
+            
+              <a href="/atom.xml" rel="alternate" target="_blank">
+                <i class="fa fa-rss"></i>
+              RSS订阅
+              </a>
+            
+              <a href="http://eepurl.com/bLDcFD" rel="external nofollow" target="_blank">
+                <i class="fa fa-rss"></i>
+              邮件订阅
+              </a>
+            
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://www.linkedin.com/in/jasongj" target="_blank" title="Linkedin" rel="external nofollow">
+                  
+                    <i class="fa fa-linkedin-square"></i>
+                  
+                  Linkedin
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="mailto:jason.guo.vip@gmail.com" target="_blank" title="E-Mail" rel="external nofollow">
+                  
+                    <i class="fa fa-envelope-o"></i>
+                  
+                  E-Mail
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.infoq.com/cn/profile/%E9%83%AD%E4%BF%8A" title="发表在InfoQ上的文章" target="_blank">发表在InfoQ上的文章</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://yuzhouwan.com/" title="博客推荐-宇宙湾" target="_blank">博客推荐-宇宙湾</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#commit-原理"><span class="nav-number">2.</span> <span class="nav-text">commit 原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#检查-Job-输出目录"><span class="nav-number">2.1.</span> <span class="nav-text">检查 Job 输出目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Driver执行setupJob"><span class="nav-number">2.2.</span> <span class="nav-text">Driver执行setupJob</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Task执行setupTask"><span class="nav-number">2.3.</span> <span class="nav-text">Task执行setupTask</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#按需创建-Task-目录"><span class="nav-number">2.4.</span> <span class="nav-text">按需创建 Task 目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#检查是否需要-commit"><span class="nav-number">2.5.</span> <span class="nav-text">检查是否需要 commit</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CommitCoordinator"><span class="nav-number">2.6.</span> <span class="nav-text">CommitCoordinator</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#commitTask"><span class="nav-number">2.7.</span> <span class="nav-text">commitTask</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#commitJob"><span class="nav-number">2.8.</span> <span class="nav-text">commitJob</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Task-恢复"><span class="nav-number">2.9.</span> <span class="nav-text">Task 恢复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#中止-Task"><span class="nav-number">2.10.</span> <span class="nav-text">中止 Task</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#中止-Job"><span class="nav-number">2.11.</span> <span class="nav-text">中止 Job</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#V1-vs-V2-committer-过程"><span class="nav-number">3.1.</span> <span class="nav-text">V1 vs. V2 committer 过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#V1-vs-V2-committer-性能对比"><span class="nav-number">3.2.</span> <span class="nav-text">V1 vs. V2 committer 性能对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#V1-vs-V2-committer-一致性对比"><span class="nav-number">3.3.</span> <span class="nav-text">V1 vs. V2 committer 一致性对比</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">郭俊 Jason</span>
+
+
+  
+  
+    <span class="copyrightHolder">
+      &nbsp; | &nbsp; 沪ICP备16005463号-1 &nbsp;
+    </span>
+  
+
+  
+  
+    <span class="post-count">
+      &nbsp; | &nbsp; 总字数 &nbsp; 282.5k
+    </span>
+  
+
+  
+  
+    <span class="post-comments-count">
+      &nbsp; |  &nbsp;
+      <a id="translateLink" href="javascript:translatePage();">繁體中文</a>
+    </span>
+   
+</div>
+
+
+<!--
+<script type="text/javascript" src="http://www.arao.me/js/tw_cn.js"></script>
+-->
+<script type="text/javascript" src="/js/src/tw_cn.js"></script>
+<script type="text/javascript">
+var defaultEncoding = 2; //网站编写字体是否繁体，1-繁体中文，2-简体中文
+var translateDelay = 0; //延迟时间,若不在前, 要设定延迟翻译时间, 如100表示100ms,默认为0
+var cookieDomain = "http://www.jasongj.com/"; //Cookie地址, 一定要设定, 通常为你的网址
+var msgToTraditionalChinese = "繁體中文"; //此处可以更改为你想要显示的文字
+var msgToSimplifiedChinese = "简体中文"; //同上，但两处均不建议更改
+var translateButtonId = "translateLink"; //默认互换id
+translateInitilization();
+</script>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+<script type="text/javascript" src="//cdn.bootcss.com/fastclick/1.0.6/fastclick.js"></script>
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+  
+
+
+  
+
+    
+    <!--
+      <script id="dsq-count-scr" src="https://jasongj.disqus.com/count.js" async></script>
+    -->
+    
+
+    
+      <!--
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.jasongj.com/spark/committer/';
+          this.page.identifier = 'spark/committer/';
+          this.page.title = 'spark/committer/';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://jasongj.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+      -->
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <!--
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  -->
+  <script src="//cdn.staticfile.org/av-core/0.6.1/av-core-mini.js"></script>
+  <script>AV.initialize("NM4EaDS1gLL02qsIqliTOYBL-gzGzoHsz", "kmS5yUFSvuaXtVA4MyRkINw4");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+  <script type="text/javascript">(function(){document.write(unescape('%3Cdiv id="bdcs"%3E%3C/div%3E'));var bdcs = document.createElement('script');bdcs.type = 'text/javascript';bdcs.async = true;bdcs.src = 'http://znsv.baidu.com/customer_search/api/js?sid=11273528160680594791' + '&plate_url=' + encodeURIComponent(window.location.href) + '&t=' + Math.ceil(new Date()/3600000);var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bdcs, s);})();</script>
+
+
+  <script type="text/javascript">$(document).ready(function(){$('.sidebar-toggle').trigger('click');$.get("http://comments.jasongj.com/disqus/count.php?limit=100", function(data){
+          var getPath = function(url) {
+            var path = document.createElement("a");
+            path.href = url;
+            return path.pathname;
+          }
+          data.response.forEach((item) => {
+            path = decodeURI(getPath(item.link));
+            $("span[identifier='" + path + "']").text(item.posts);
+          });
+        });});</script>
+
+  <!--
+  
+  -->
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</body>
+</html>
