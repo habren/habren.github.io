@@ -5,11 +5,11 @@
     
   <url>
     <loc>http://www.jasongj.com/spark/committer/</loc>
-    <lastmod>2018-09-24T23:02:13.000Z</lastmod>
+    <lastmod>2018-09-25T23:20:13.000Z</lastmod>
     <data>
         <display>
-        <title>Spark OutputCommitter 保证数据一致性</title>
-        <pubTime>2018-09-24T23:02:13.000Z</pubTime>
+        <title>Spark CommitCoordinator 保证数据一致性</title>
+        <pubTime>2018-09-25T23:20:13.000Z</pubTime>
         
         <tag>big data</tag>
          
@@ -279,36 +279,6 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/ml/classification/</loc>
-    <lastmod>2017-11-12T00:01:01.000Z</lastmod>
-    <data>
-        <display>
-        <title>机器学习（二） 如何做到Kaggle排名前2%</title>
-        <pubTime>2017-04-11T23:02:13.000Z</pubTime>
-        
-        <tag>machine learning</tag>
-         
-        <tag>机器学习</tag>
-         
-        <tag>AI</tag>
-         
-         
-           
-             
-              <breadCrumb title="machine learning" url="http://www.jasongj.com/categories/machine-learning/"/>
-          
-             
-              <breadCrumb title="机器学习" url="http://www.jasongj.com/categories/machine-learning/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="AI" url="http://www.jasongj.com/categories/machine-learning/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/AI/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://www.jasongj.com/zookeeper/fastleaderelection/</loc>
     <lastmod>2017-11-12T00:01:01.000Z</lastmod>
     <data>
@@ -336,6 +306,36 @@
               <breadCrumb title="大数据" url="http://www.jasongj.com/categories/zookeeper/big-data/%E5%A4%A7%E6%95%B0%E6%8D%AE/"/>
           
              
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/ml/classification/</loc>
+    <lastmod>2017-11-12T00:01:01.000Z</lastmod>
+    <data>
+        <display>
+        <title>机器学习（二） 如何做到Kaggle排名前2%</title>
+        <pubTime>2017-04-11T23:02:13.000Z</pubTime>
+        
+        <tag>machine learning</tag>
+         
+        <tag>机器学习</tag>
+         
+        <tag>AI</tag>
+         
+         
+           
+             
+              <breadCrumb title="machine learning" url="http://www.jasongj.com/categories/machine-learning/"/>
+          
+             
+              <breadCrumb title="机器学习" url="http://www.jasongj.com/categories/machine-learning/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="AI" url="http://www.jasongj.com/categories/machine-learning/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/AI/"/>
+          
         </display>
     </data>
     </url>
@@ -491,39 +491,6 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/sql/cte/</loc>
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    <data>
-        <display>
-        <title>SQL优化（五） PostgreSQL （递归）CTE 通用表表达式</title>
-        <pubTime>2016-03-18T12:49:04.000Z</pubTime>
-        
-        <tag>PostgreSQL</tag>
-         
-        <tag>Database</tag>
-         
-        <tag>SQL优化</tag>
-         
-        <tag>SQL</tag>
-         
-         
-           
-             
-              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
-          
-             
-              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
-          
-             
-              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
-          
-             
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://www.jasongj.com/2015/03/07/Join1/</loc>
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     <data>
@@ -549,39 +516,6 @@
           
              
               <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
-          
-             
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://www.jasongj.com/2015/06/08/KafkaColumn3/</loc>
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    <data>
-        <display>
-        <title>Kafka设计解析（三）- Kafka High Availability （下）</title>
-        <pubTime>2015-06-08T07:43:29.000Z</pubTime>
-        
-        <tag>big data</tag>
-         
-        <tag>分布式</tag>
-         
-        <tag>大数据</tag>
-         
-        <tag>Kafka</tag>
-         
-         
-           
-             
-              <breadCrumb title="Kafka" url="http://www.jasongj.com/categories/Kafka/"/>
-          
-             
-              <breadCrumb title="big data" url="http://www.jasongj.com/categories/Kafka/big-data/"/>
-          
-             
-              <breadCrumb title="大数据" url="http://www.jasongj.com/categories/Kafka/big-data/%E5%A4%A7%E6%95%B0%E6%8D%AE/"/>
           
              
         </display>
@@ -623,140 +557,12 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/2015/03/15/count_distinct/</loc>
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    <data>
-        <display>
-        <title>SQL优化（二） 快速计算Distinct Count</title>
-        <pubTime>2015-03-15T08:00:00.000Z</pubTime>
-        
-        <tag>PostgreSQL</tag>
-         
-        <tag>Database</tag>
-         
-        <tag>SQL优化</tag>
-         
-        <tag>SQL</tag>
-         
-         
-           
-             
-              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
-          
-             
-              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
-          
-             
-              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
-          
-             
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/</loc>
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    <data>
-        <display>
-        <title>SQL优化（四） PostgreSQL存储过程</title>
-        <pubTime>2015-12-27T06:59:45.000Z</pubTime>
-        
-        <tag>PostgreSQL</tag>
-         
-        <tag>Database</tag>
-         
-        <tag>SQL优化</tag>
-         
-        <tag>SQL</tag>
-         
-         
-           
-             
-              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
-          
-             
-              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
-          
-             
-              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
-          
-             
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://www.jasongj.com/2015/12/13/SQL3_partition/</loc>
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     <data>
         <display>
         <title>SQL优化（三） PostgreSQL Table Partitioning</title>
         <pubTime>2015-12-13T04:13:05.000Z</pubTime>
-        
-        <tag>PostgreSQL</tag>
-         
-        <tag>Database</tag>
-         
-        <tag>SQL优化</tag>
-         
-        <tag>SQL</tag>
-         
-         
-           
-             
-              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
-          
-             
-              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
-          
-             
-              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
-          
-             
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://www.jasongj.com/uml/class_diagram/</loc>
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    <data>
-        <display>
-        <title>UML(一) 类图详解</title>
-        <pubTime>2016-08-07T22:55:29.000Z</pubTime>
-        
-        <tag>system design</tag>
-         
-        <tag>系统设计</tag>
-         
-        <tag>架构设计</tag>
-         
-        <tag>UML</tag>
-         
-         
-           
-             
-              <breadCrumb title="system design" url="http://www.jasongj.com/categories/system-design/"/>
-          
-             
-              <breadCrumb title="系统设计" url="http://www.jasongj.com/categories/system-design/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://www.jasongj.com/sql/mvcc/</loc>
-    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
-    <data>
-        <display>
-        <title>SQL优化（六） MVCC PostgreSQL实现事务和多版本并发控制的精华</title>
-        <pubTime>2016-06-05T23:09:04.000Z</pubTime>
         
         <tag>PostgreSQL</tag>
          
@@ -817,12 +623,12 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/2015/01/02/Kafka%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</loc>
+    <loc>http://www.jasongj.com/2015/06/08/KafkaColumn3/</loc>
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     <data>
         <display>
-        <title>Kafka深度解析</title>
-        <pubTime>2015-01-02T07:30:25.000Z</pubTime>
+        <title>Kafka设计解析（三）- Kafka High Availability （下）</title>
+        <pubTime>2015-06-08T07:43:29.000Z</pubTime>
         
         <tag>big data</tag>
          
@@ -850,12 +656,206 @@
 
     
   <url>
+    <loc>http://www.jasongj.com/2015/03/15/count_distinct/</loc>
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>SQL优化（二） 快速计算Distinct Count</title>
+        <pubTime>2015-03-15T08:00:00.000Z</pubTime>
+        
+        <tag>PostgreSQL</tag>
+         
+        <tag>Database</tag>
+         
+        <tag>SQL优化</tag>
+         
+        <tag>SQL</tag>
+         
+         
+           
+             
+              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
+          
+             
+              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
+          
+             
+              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
+          
+             
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://www.jasongj.com/2015/12/31/KafkaColumn5_kafka_benchmark/</loc>
     <lastmod>2017-03-15T13:17:39.000Z</lastmod>
     <data>
         <display>
         <title>Kafka设计解析（五）- Kafka性能测试方法及Benchmark报告</title>
         <pubTime>2015-12-30T23:01:27.000Z</pubTime>
+        
+        <tag>big data</tag>
+         
+        <tag>分布式</tag>
+         
+        <tag>大数据</tag>
+         
+        <tag>Kafka</tag>
+         
+         
+           
+             
+              <breadCrumb title="Kafka" url="http://www.jasongj.com/categories/Kafka/"/>
+          
+             
+              <breadCrumb title="big data" url="http://www.jasongj.com/categories/Kafka/big-data/"/>
+          
+             
+              <breadCrumb title="大数据" url="http://www.jasongj.com/categories/Kafka/big-data/%E5%A4%A7%E6%95%B0%E6%8D%AE/"/>
+          
+             
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/sql/mvcc/</loc>
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>SQL优化（六） MVCC PostgreSQL实现事务和多版本并发控制的精华</title>
+        <pubTime>2016-06-05T23:09:04.000Z</pubTime>
+        
+        <tag>PostgreSQL</tag>
+         
+        <tag>Database</tag>
+         
+        <tag>SQL优化</tag>
+         
+        <tag>SQL</tag>
+         
+         
+           
+             
+              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
+          
+             
+              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
+          
+             
+              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
+          
+             
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/2015/12/27/SQL4_%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B_Store%20Procedure/</loc>
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>SQL优化（四） PostgreSQL存储过程</title>
+        <pubTime>2015-12-27T06:59:45.000Z</pubTime>
+        
+        <tag>PostgreSQL</tag>
+         
+        <tag>Database</tag>
+         
+        <tag>SQL优化</tag>
+         
+        <tag>SQL</tag>
+         
+         
+           
+             
+              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
+          
+             
+              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
+          
+             
+              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
+          
+             
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/uml/class_diagram/</loc>
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>UML(一) 类图详解</title>
+        <pubTime>2016-08-07T22:55:29.000Z</pubTime>
+        
+        <tag>system design</tag>
+         
+        <tag>系统设计</tag>
+         
+        <tag>架构设计</tag>
+         
+        <tag>UML</tag>
+         
+         
+           
+             
+              <breadCrumb title="system design" url="http://www.jasongj.com/categories/system-design/"/>
+          
+             
+              <breadCrumb title="系统设计" url="http://www.jasongj.com/categories/system-design/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/sql/cte/</loc>
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>SQL优化（五） PostgreSQL （递归）CTE 通用表表达式</title>
+        <pubTime>2016-03-18T12:49:04.000Z</pubTime>
+        
+        <tag>PostgreSQL</tag>
+         
+        <tag>Database</tag>
+         
+        <tag>SQL优化</tag>
+         
+        <tag>SQL</tag>
+         
+         
+           
+             
+              <breadCrumb title="PostgreSQL" url="http://www.jasongj.com/categories/PostgreSQL/"/>
+          
+             
+              <breadCrumb title="Database" url="http://www.jasongj.com/categories/PostgreSQL/Database/"/>
+          
+             
+              <breadCrumb title="SQL优化" url="http://www.jasongj.com/categories/PostgreSQL/Database/SQL%E4%BC%98%E5%8C%96/"/>
+          
+             
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/2015/01/02/Kafka%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</loc>
+    <lastmod>2017-03-15T13:17:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>Kafka深度解析</title>
+        <pubTime>2015-01-02T07:30:25.000Z</pubTime>
         
         <tag>big data</tag>
          
@@ -1158,12 +1158,12 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/design_pattern/observer/</loc>
+    <loc>http://www.jasongj.com/design_pattern/simple_factory/</loc>
     <lastmod>2017-02-17T12:31:23.000Z</lastmod>
     <data>
         <display>
-        <title>Java设计模式（四） 观察者模式</title>
-        <pubTime>2016-04-13T12:13:46.000Z</pubTime>
+        <title>Java设计模式（一） 简单工厂模式不简单</title>
+        <pubTime>2016-03-08T12:49:04.000Z</pubTime>
         
         <tag>Java</tag>
          
@@ -1239,12 +1239,12 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/design_pattern/simple_factory/</loc>
+    <loc>http://www.jasongj.com/design_pattern/observer/</loc>
     <lastmod>2017-02-17T12:31:23.000Z</lastmod>
     <data>
         <display>
-        <title>Java设计模式（一） 简单工厂模式不简单</title>
-        <pubTime>2016-03-08T12:49:04.000Z</pubTime>
+        <title>Java设计模式（四） 观察者模式</title>
+        <pubTime>2016-04-13T12:13:46.000Z</pubTime>
         
         <tag>Java</tag>
          
@@ -1266,12 +1266,12 @@
 
     
   <url>
-    <loc>http://www.jasongj.com/java/nio_reactor/</loc>
+    <loc>http://www.jasongj.com/java/thread_communication/</loc>
     <lastmod>2017-02-15T12:31:23.000Z</lastmod>
     <data>
         <display>
-        <title>Java进阶（五）Java I/O模型从BIO到NIO和Reactor模式</title>
-        <pubTime>2016-08-22T22:55:29.000Z</pubTime>
+        <title>Java进阶（四）线程间通信剖析</title>
+        <pubTime>2016-06-22T22:55:29.000Z</pubTime>
         
         <tag>java</tag>
          
@@ -1292,26 +1292,6 @@
         <display>
         <title>Java进阶（一）Annotation（注解）</title>
         <pubTime>2016-01-17T07:11:29.000Z</pubTime>
-        
-        <tag>java</tag>
-         
-         
-           
-             
-              <breadCrumb title="java" url="http://www.jasongj.com/categories/java/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://www.jasongj.com/java/thread_communication/</loc>
-    <lastmod>2017-02-15T12:31:23.000Z</lastmod>
-    <data>
-        <display>
-        <title>Java进阶（四）线程间通信剖析</title>
-        <pubTime>2016-06-22T22:55:29.000Z</pubTime>
         
         <tag>java</tag>
          
@@ -1352,6 +1332,26 @@
         <display>
         <title>Java进阶（三）多线程开发关键技术</title>
         <pubTime>2016-06-19T22:55:29.000Z</pubTime>
+        
+        <tag>java</tag>
+         
+         
+           
+             
+              <breadCrumb title="java" url="http://www.jasongj.com/categories/java/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://www.jasongj.com/java/nio_reactor/</loc>
+    <lastmod>2017-02-15T12:31:23.000Z</lastmod>
+    <data>
+        <display>
+        <title>Java进阶（五）Java I/O模型从BIO到NIO和Reactor模式</title>
+        <pubTime>2016-08-22T22:55:29.000Z</pubTime>
         
         <tag>java</tag>
          
